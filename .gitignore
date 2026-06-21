@@ -28,3 +28,5 @@ yarn-error.log
 /storage/*.json
 
 *_Zone.Identifier
+
+/storage/*.json
