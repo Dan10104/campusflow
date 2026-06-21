@@ -1,0 +1,87 @@
+// Body
+$body-bg: #f8fafc;
+
+// Typography
+$font-family-sans-serif: 'Nunito', sans-serif;
+$font-size-base: 0.9rem;
+$line-height-base: 1.6;
+
+// Layout
+$sidenav-width: 190px;
+$sidenav-width-collapsed: 50px;
+$header-height: 40px;
+$footer-height: 40px;
+
+/*----------------------Tema por defecto-------------------*/
+
+//Fonts default
+$font-family-arial-default: Arial, Helvetica, sans-serif;
+$font-size-default: 12px;
+$letter-spacing-default: 1px;
+
+// Colors
+$green-300: #81C784;
+$green-400: #66BB6A;
+$green-500: #4CAF50;
+$green-600: #43A047;
+$green-700: #388E3C;
+$green-800: #2E7D32;
+$green-900: #1B5E20;
+
+$gray-50: #FAFAFA;
+$gray-100: #F5F5F5;
+$gray-200: #EEEEEE;
+$gray-300: #E0E0E0;
+$gray-400: #BDBDBD;
+$gray-500: #9E9E9E;
+$gray-600: #757575;
+$gray-700: #616161;
+$gray-800: #424242;
+$gray-900: #212121;
+
+$deep-purple-100: #D1C4E9;
+$deep-purple-200: #B39DDB;
+$deep-purple-400: #7E57C2;
+$deep-purple-500: #673AB7;
+$deep-purple-600: #5E35B1;
+$deep-purple-700: #512DA8;
+$deep-purple-800: #4527A0;
+
+$red-100: #FFCDD2;
+$red-200: #EF9A9A;
+$red-300: #E57373;
+$red-400: #EF5350;
+$red-500: #F44336;
+$red-600: #E53935;
+$red-700: #D32F2F;
+$red-800: #C62828;
+$red-900: #B71C1C;
+
+$yellow-800: #F9A825;
+
+$light-green-600: #7CB342;
+$light-green-700: #689F38;
+
+$purple-icon-sidenav-color: #405386;
+
+/*----------------------Tema ninos-------------------*/
+//Colores para el tema por para ninos
+$primary-color-nino: #0D47A1;
+$primary-hover-color-nino: #1976D2;
+$light-color-nino: #81D4FA;
+$scroll-color-nino: #1A237E;
+
+$font-family-gill-nino: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+$font-size-nino: 16px;
+$letter-spacing-nino: 2px;
+
+/*----------------------Tema Adultos-------------------*/
+//Colores para el tema de adultos
+$primary-color-adulto: #37474F;
+$primary-hover-color-adulto: #546E7A;
+$light-color-adulto: #BDBDBD;
+$scroll-color-adulto: #616161;
+
+$font-family-franklin-adulto: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+$font-size-adulto: 18px;
+$letter-spacing-adulto: 2px;

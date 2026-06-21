@@ -1,0 +1,130 @@
+@import "variables";
+
+.app:not(.app-2) {
+  width: calc(100vw - $sidenav-width);
+}
+
+/* Cuando el elemento tiene ambas clases: .app y .app-2  */
+.app.app-2 {
+  width: 100%;
+}
+
+.app {
+	float: right;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+
+	font-family: $font-family-arial-default;
+	font-size: $font-size-default;
+	letter-spacing: $letter-spacing-default;
+	
+	&__header {
+		width: inherit;
+		height: $header-height;
+		display: flex;
+		justify-content: space-between;
+		border-bottom: 1px solid  $gray-50;
+		box-shadow: 0 0 4px $gray-700;
+		background-color:  $gray-50;
+		position: fixed;
+		z-index: 1;
+		font-size: inherit;
+
+		&__left {
+			width: 30%;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+
+		&__right {
+			width: 60%;
+			display: flex;
+			justify-content: end;
+			align-items: center;
+		}
+	}
+	
+	&__body {
+		position: absolute;
+		top: $header-height;
+		width: inherit;
+		height: calc(100vh - $header-height - $footer-height);
+		padding: 10px;
+		overflow: auto;
+		background-color:  $gray-50;
+		font-size: inherit;
+
+		&__footer {
+			width: calc(100% - $sidenav-width);
+			height: $footer-height;
+			position: fixed;
+			bottom: 0;
+			left: $sidenav-width;
+			border-top: 1px solid  $gray-50;
+			box-shadow: 0 0 4px $gray-700;
+			background-color:  $gray-50;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			font-size: inherit;
+
+			&__visitas {
+				width: 30px;
+				height: 30px;
+				background-color: $green-700;
+				color: #fefefe;
+				font-size: 11px;
+				border-radius: 50%;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+			}
+		}
+	}
+
+
+	$primary: $green-700;
+	// $table-accent-bg: blue;
+	$table-bg: $gray-100;
+	$table-hover-bg: $gray-300;
+	$table-border-color: $gray-400;
+
+	$input-border-radius: 2px;
+	$input-focus-border-color: $yellow-800;
+	$input-focus-box-shadow: none;
+	$input-placeholder-color: $gray-500;
+
+	$form-select-border-radius: 2px;
+	$form-select-focus-border-color: $yellow-800;
+	$form-select-focus-box-shadow: none;
+
+	$pagination-color: $green-900;
+	$pagination-bg: $gray-50;
+	$pagination-border-radius: 2px;
+	$pagination-border-color: $gray-300;
+
+	$pagination-hover-color: $gray-100;
+	$pagination-hover-bg: $green-300;
+
+	$pagination-active-color: $gray-100;
+	$pagination-active-bg: $green-300;
+	$pagination-active-border-color: $gray-300;
+
+	$pagination-disabled-color: $gray-800;
+	$pagination-disabled-bg: $gray-300;
+	@import 'bootstrap/scss/bootstrap';
+
+	&--sidebar-collapsed {
+		// Override width for body/content
+		&:not(.app-2) {
+			width: calc(100vw - $sidenav-width-collapsed);
+		}
+
+		.app__body__footer {
+			width: calc(100% - $sidenav-width-collapsed);
+			left: $sidenav-width-collapsed;
+		}
+	}
+}
