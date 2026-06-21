@@ -1,48 +1,72 @@
 <template>
-  <div class="nav">
+  <aside class="nav" aria-label="Navegacion principal">
     <div class="nav__header">
-      <img class="nav__header__image text-light" :src="logoUrl" alt="mylogo.png" />
-      <span>{{ user.nombre }}</span>
+      <ApplicationLogo class="nav__brand-mark" />
+      <div class="nav__brand-copy">
+        <span class="nav__brand-name">CampusFlow</span>
+        <span class="nav__brand-maker">Nexora Tech</span>
+      </div>
+      <button
+        type="button"
+        class="nav__collapse-button"
+        aria-label="Contraer menu"
+        title="Contraer menu"
+        @click="toggleSidebar"
+      >
+        <i class="bi bi-layout-sidebar-inset" aria-hidden="true"></i>
+      </button>
     </div>
 
-    <div class="nav__body">
-      <div class="nav__body__items">
+    <div class="nav__user">
+      <div class="nav__user-avatar" aria-hidden="true">
+        {{ userInitials }}
+      </div>
+      <div class="nav__user-copy">
+        <span class="nav__user-name">{{ user?.nombre || user?.name || 'Usuario' }}</span>
+        <span class="nav__user-role">Panel administrativo</span>
+      </div>
+    </div>
 
-        <!-- Permisos filtrados -->
+    <nav class="nav__body">
+      <div class="nav__body__items">
         <template v-for="permiso in permisos" :key="permiso.codigo">
           <Link
             v-if="permiso.estado"
             :href="route(permiso.ruta)"
             :class="{ 'nav__body__items__active': isActiveRoute(permiso.ruta) }"
+            :title="permiso.nombre"
           >
-            <i :class="permiso.icono"></i>
+            <i :class="permiso.icono" aria-hidden="true"></i>
             <span>{{ permiso.nombre }}</span>
           </Link>
         </template>
       </div>
-    </div>
-  </div>
+    </nav>
+  </aside>
 </template>
 
-
 <script setup>
-import { computed } from 'vue'
-import { usePage, Link } from '@inertiajs/vue3'
+import { computed, inject } from 'vue';
+import { usePage, Link } from '@inertiajs/vue3';
+import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 
-// Datos desde el backend
-const page = usePage()
-const user = page.props.auth.user
-const logoUrl = '/assets/images/logo.jpg'
-const { props } = usePage()
-// Permisos anidados: role → permisos → funcionalidad
-const permisos = props.auth?.permisos || []
+const { props } = usePage();
+const user = props.auth?.user;
+const permisos = props.auth?.permisos || [];
+const toggleSidebar = inject('toggleSidebar', () => {});
 
-
-console.log('Permisos:', permisos)
+const userInitials = computed(() => {
+  const displayName = user?.nombre || user?.name || user?.email || 'Usuario';
+  return displayName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('');
+});
 
 const isActiveRoute = (name) => {
   if (!name) return false;
-  // Comprobar coincidencia exacta o prefijo de recurso (ej: users.index activa users.create)
-  return route().current(name) || route().current(name.split('.')[0] + '.*');
-}
+  return route().current(name) || route().current(`${name.split('.')[0]}.*`);
+};
 </script>
