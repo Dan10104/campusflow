@@ -14,14 +14,7 @@
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <!-- Scripts -->
         @routes
-        @vite(['resources/sass/app.scss', 'resources/js/app.js'])
-        @vite([
-            "resources/sass/sidenav.scss",
-            "resources/sass/app-body.scss",
-            "resources/sass/nino-theme.scss",
-            "resources/sass/adult-theme.scss",
-            "resources/sass/buttons.scss"
-        ])
+        @vite(['resources/js/app.js'])
         @inertiaHead
     </head>
     <body>
