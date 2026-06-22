@@ -3,11 +3,11 @@ import { ref, onMounted } from 'vue';
 import { Head, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Chart from 'chart.js/auto';
-import { 
-    ArrowDownTrayIcon, 
-    CalendarIcon, 
-    WrenchIcon, 
-    ComputerDesktopIcon 
+import {
+    ArrowDownTrayIcon,
+    CalendarIcon,
+    WrenchIcon,
+    ComputerDesktopIcon
 } from '@heroicons/vue/24/outline';
 
 const { kpis, charts, listas } = usePage().props;
@@ -15,20 +15,77 @@ const { kpis, charts, listas } = usePage().props;
 const chartEstados = ref(null);
 const chartAulas = ref(null);
 
-onMounted(() => {
-    // 1. Gráfico de Pastel: Estado de Reservas
-    const estadosLabels = charts.estados.map(e => e.estado.toUpperCase());
-    const estadosData = charts.estados.map(e => e.total);
-    
-    // Colores semánticos para estados
-    const colorMap = {
-        'confirmada': '#10B981', // Verde
-        'pendiente': '#F59E0B',  // Naranja
-        'cancelada': '#EF4444',  // Rojo
-        'en_uso': '#3B82F6',     // Azul
-        'completada': '#6B7280'  // Gris
+const getCssVar = (name, fallback) => {
+    if (typeof window === 'undefined') {
+        return fallback;
+    }
+
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+};
+
+const normalizeText = (value) => String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+const statusColorMap = {
+    confirmada: '#10B981',
+    pendiente: '#F59E0B',
+    cancelada: '#EF4444',
+    en_uso: '#2563EB',
+    completada: '#6B7280'
+};
+
+const getReservationColor = (estado) => statusColorMap[normalizeText(estado)] || '#06B6D4';
+
+const formatStatusLabel = (estado) => {
+    const value = String(estado || '').replace(/_/g, ' ').trim();
+
+    return value ? value.charAt(0).toUpperCase() + value.slice(1) : 'Estado';
+};
+
+const chartEstadosLegend = charts.estados.map(e => ({
+    estado: e.estado,
+    total: e.total,
+    label: formatStatusLabel(e.estado),
+    color: getReservationColor(e.estado)
+}));
+
+const reservationStatusClass = (estado) => {
+    const classes = {
+        confirmada: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        pendiente: 'border-amber-200 bg-amber-50 text-amber-700',
+        cancelada: 'border-red-200 bg-red-50 text-red-700',
+        en_uso: 'border-blue-200 bg-blue-50 text-blue-700',
+        completada: 'border-slate-200 bg-slate-100 text-slate-700',
     };
-    const backgroundColors = charts.estados.map(e => colorMap[e.estado] || '#6366F1');
+
+    return classes[normalizeText(estado)] || 'border-cyan-200 bg-cyan-50 text-cyan-700';
+};
+
+const demandLevelClass = (nivel) => {
+    const normalized = normalizeText(nivel);
+
+    if (normalized === 'critico') {
+        return 'border-red-200 bg-red-50 text-red-700';
+    }
+
+    if (normalized === 'alto' || normalized === 'alta') {
+        return 'border-amber-200 bg-amber-50 text-amber-700';
+    }
+
+    return 'border-blue-200 bg-blue-50 text-blue-700';
+};
+
+onMounted(() => {
+    const textColor = getCssVar('--cf-text-muted', '#64748B');
+    const surfaceColor = getCssVar('--cf-surface', '#FFFFFF');
+    const borderColor = getCssVar('--cf-border', '#E2E8F0');
+    const accentColor = getCssVar('--cf-accent', '#2563EB');
+
+    const estadosLabels = charts.estados.map(e => formatStatusLabel(e.estado));
+    const estadosData = charts.estados.map(e => e.total);
+    const backgroundColors = charts.estados.map(e => getReservationColor(e.estado));
 
     new Chart(chartEstados.value, {
         type: 'doughnut',
@@ -37,19 +94,39 @@ onMounted(() => {
             datasets: [{
                 data: estadosData,
                 backgroundColor: backgroundColors,
-                borderWidth: 0
+                borderColor: surfaceColor,
+                borderWidth: 2,
+                hoverOffset: 5,
+                spacing: 1
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            cutout: '72%',
+            layout: {
+                padding: 2
+            },
             plugins: {
-                legend: { position: 'right' }
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: '#0B1F3A',
+                    titleColor: '#FFFFFF',
+                    bodyColor: '#FFFFFF',
+                    borderColor: accentColor,
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: true,
+                    callbacks: {
+                        label: (context) => `${context.label}: ${context.parsed}`
+                    }
+                }
             }
         }
     });
 
-    // 2. Gráfico de Barras: Aulas Top
     new Chart(chartAulas.value, {
         type: 'bar',
         data: {
@@ -57,204 +134,322 @@ onMounted(() => {
             datasets: [{
                 label: 'Cantidad de Reservas',
                 data: charts.aulas_top.map(a => a.total),
-                backgroundColor: '#3B82F6',
-                borderRadius: 4
+                backgroundColor: accentColor,
+                hoverBackgroundColor: '#06B6D4',
+                borderColor: accentColor,
+                borderWidth: 1,
+                borderRadius: 8,
+                borderSkipped: false,
+                maxBarThickness: 28,
+                categoryPercentage: 0.72,
+                barPercentage: 0.78
             }]
         },
         options: {
+            indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true } }
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#0B1F3A',
+                    titleColor: '#FFFFFF',
+                    bodyColor: '#FFFFFF',
+                    borderColor: accentColor,
+                    borderWidth: 1,
+                    padding: 12,
+                    callbacks: {
+                        label: (context) => `Reservas: ${context.parsed.x}`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: textColor,
+                        precision: 0,
+                        font: {
+                            size: 11,
+                            weight: '600'
+                        }
+                    },
+                    grid: {
+                        color: borderColor,
+                        drawTicks: false,
+                        lineWidth: 0.5
+                    },
+                    border: {
+                        color: borderColor
+                    }
+                },
+                y: {
+                    ticks: {
+                        color: textColor,
+                        autoSkip: false,
+                        font: {
+                            size: 11,
+                            weight: '600'
+                        }
+                    },
+                    grid: {
+                        display: false
+                    },
+                    border: {
+                        color: borderColor
+                    }
+                }
+            }
         }
     });
 });
 
 const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString('es-BO', { 
-        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+    return new Date(dateString).toLocaleString('es-BO', {
+        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
     });
 };
 </script>
 
 <template>
-    <Head title="Panel de Control" />
+    <Head title="Dashboard" />
 
     <AuthenticatedLayout>
-        <div class="py-6">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                
-                <div class="md:flex md:items-center md:justify-between mb-8">
-                    <div class="flex-1 min-w-0">
-                        <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
-                            Dashboard Institucional
-                        </h2>
-                        <p class="mt-1 text-sm text-gray-500">
-                            Resumen operativo de espacios y activos.
-                        </p>
+        <section class="min-w-0 space-y-4 px-4 py-4 sm:space-y-5 sm:px-6 lg:px-6">
+            <div class="mx-auto max-w-7xl space-y-4 sm:space-y-5">
+                <header class="overflow-hidden rounded-2xl border border-[var(--cf-border)] bg-[var(--cf-surface)] shadow-sm">
+                    <div class="flex flex-col gap-4 px-5 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+                        <div class="min-w-0">
+                            <p class="text-xs font-bold uppercase tracking-[0.16em] text-[#2563EB]">
+                                Panel institucional
+                            </p>
+                            <h1 class="mt-1.5 text-2xl font-bold tracking-normal text-[var(--cf-heading)] sm:text-3xl">
+                                Dashboard
+                            </h1>
+                            <p class="mt-2 max-w-2xl text-sm leading-6 text-[var(--cf-text-muted)]">
+                                Resumen operativo de espacios, reservas y activos académicos.
+                            </p>
+                        </div>
+
+                        <div class="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-2">
+                            <a
+                                :href="route('reporte.exportar', 'pdf')"
+                                target="_blank"
+                                class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2 text-sm font-bold text-red-700 shadow-sm transition hover:border-red-300 hover:bg-red-100 focus:outline-none focus:ring-4 focus:ring-red-500/20 focus:ring-offset-2 focus:ring-offset-[var(--cf-surface)]"
+                            >
+                                <ArrowDownTrayIcon aria-hidden="true" class="h-4 w-4" />
+                                Exportar PDF
+                            </a>
+                            <a
+                                :href="route('reporte.exportar', 'csv')"
+                                target="_blank"
+                                class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-bold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-100 focus:outline-none focus:ring-4 focus:ring-emerald-500/20 focus:ring-offset-2 focus:ring-offset-[var(--cf-surface)]"
+                            >
+                                <ArrowDownTrayIcon aria-hidden="true" class="h-4 w-4" />
+                                Exportar CSV
+                            </a>
+                        </div>
                     </div>
-                    <div class="mt-4 flex md:mt-0 md:ml-4 space-x-3">
-                        <a :href="route('reporte.exportar', 'pdf')" target="_blank" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                            <ArrowDownTrayIcon class="h-5 w-5 mr-2 text-red-500" />
-                            PDF
-                        </a>
-                        <a :href="route('reporte.exportar', 'csv')" target="_blank" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-                            <ArrowDownTrayIcon class="h-5 w-5 mr-2 text-green-500" />
-                            CSV
-                        </a>
-                    </div>
+                </header>
+
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-3 lg:gap-4">
+                    <article class="min-h-[7.5rem] rounded-2xl border border-t-4 border-[var(--cf-border)] border-t-[#2563EB] bg-[var(--cf-surface)] p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                        <div class="flex items-center gap-3">
+                            <div class="rounded-xl bg-blue-50 p-2.5 text-[#2563EB]">
+                                <CalendarIcon aria-hidden="true" class="h-5 w-5" />
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-[var(--cf-text-muted)]">Reservas este mes</p>
+                                <p class="mt-1 text-3xl font-bold tracking-normal text-[var(--cf-heading)]">{{ kpis.reservas_mes }}</p>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="min-h-[7.5rem] rounded-2xl border border-t-4 border-[var(--cf-border)] border-t-[#06B6D4] bg-[var(--cf-surface)] p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                        <div class="flex items-center gap-3">
+                            <div class="rounded-xl bg-cyan-50 p-2.5 text-[#0891B2]">
+                                <ComputerDesktopIcon aria-hidden="true" class="h-5 w-5" />
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-[var(--cf-text-muted)]">Activos prestados</p>
+                                <p class="mt-1 text-3xl font-bold tracking-normal text-[var(--cf-heading)]">{{ kpis.activos_prestados }}</p>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="min-h-[7.5rem] rounded-2xl border border-t-4 border-[var(--cf-border)] border-t-amber-500 bg-[var(--cf-surface)] p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                        <div class="flex items-center gap-3">
+                            <div class="rounded-xl bg-amber-50 p-2.5 text-amber-600">
+                                <WrenchIcon aria-hidden="true" class="h-5 w-5" />
+                            </div>
+                            <div>
+                                <p class="text-sm font-semibold text-[var(--cf-text-muted)]">Aulas en mantenimiento</p>
+                                <p class="mt-1 text-3xl font-bold tracking-normal text-[var(--cf-heading)]">{{ kpis.aulas_mantenimiento }}</p>
+                            </div>
+                        </div>
+                    </article>
                 </div>
 
-                <div class="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-8">
-                    <div class="bg-white overflow-hidden shadow rounded-lg">
-                        <div class="p-5 flex items-center">
-                            <div class="flex-shrink-0 bg-blue-100 rounded-md p-3">
-                                <CalendarIcon class="h-6 w-6 text-blue-600" />
+                <div class="grid grid-cols-1 gap-5 lg:grid-cols-5">
+                    <article class="rounded-2xl border border-[var(--cf-border)] bg-[var(--cf-surface)] p-4 shadow-sm transition hover:shadow-md sm:p-5 lg:col-span-2">
+                        <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <h2 class="text-base font-bold text-[var(--cf-heading)]">Estado de reservas</h2>
+                                <p class="mt-1 text-xs leading-5 text-[var(--cf-text-muted)]">
+                                    Distribución actual por estado operativo.
+                                </p>
                             </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 truncate">Reservas este mes</dt>
-                                    <dd class="text-3xl font-semibold text-gray-900">{{ kpis.reservas_mes }}</dd>
-                                </dl>
-                            </div>
+                            <span class="w-fit rounded-full border border-[var(--cf-border)] bg-[var(--cf-surface-muted)] px-2.5 py-1 text-xs font-bold text-[var(--cf-text-muted)]">
+                                Distribución actual
+                            </span>
                         </div>
-                    </div>
 
-                    <div class="bg-white overflow-hidden shadow rounded-lg">
-                        <div class="p-5 flex items-center">
-                            <div class="flex-shrink-0 bg-yellow-100 rounded-md p-3">
-                                <ComputerDesktopIcon class="h-6 w-6 text-yellow-600" />
+                        <div class="grid gap-4 sm:grid-cols-[minmax(0,0.95fr)_minmax(8rem,0.8fr)] sm:items-center">
+                            <div class="relative mx-auto h-56 w-full max-w-[14rem] sm:h-60 sm:max-w-[15rem]">
+                                <canvas ref="chartEstados"></canvas>
                             </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 truncate">Activos Prestados</dt>
-                                    <dd class="text-3xl font-semibold text-gray-900">{{ kpis.activos_prestados }}</dd>
-                                </dl>
-                            </div>
+                            <ul class="space-y-2">
+                                <li
+                                    v-for="item in chartEstadosLegend"
+                                    :key="item.estado"
+                                    class="flex items-center justify-between gap-3 rounded-xl border border-[var(--cf-border)] bg-[var(--cf-surface-muted)] px-3 py-2 text-xs"
+                                >
+                                    <span class="inline-flex min-w-0 items-center gap-2 font-semibold text-[var(--cf-text)]">
+                                        <span class="h-2.5 w-2.5 flex-none rounded-full" :style="{ backgroundColor: item.color }"></span>
+                                        <span class="truncate">{{ item.label }}</span>
+                                    </span>
+                                    <span class="font-bold text-[var(--cf-heading)]">{{ item.total }}</span>
+                                </li>
+                            </ul>
                         </div>
-                    </div>
+                    </article>
 
-                    <div class="bg-white overflow-hidden shadow rounded-lg">
-                        <div class="p-5 flex items-center">
-                            <div class="flex-shrink-0 bg-red-100 rounded-md p-3">
-                                <WrenchIcon class="h-6 w-6 text-red-600" />
+                    <article class="rounded-2xl border border-[var(--cf-border)] bg-[var(--cf-surface)] p-4 shadow-sm transition hover:shadow-md sm:p-5 lg:col-span-3">
+                        <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <h2 class="text-base font-bold text-[var(--cf-heading)]">Aulas más solicitadas</h2>
+                                <p class="mt-1 text-xs leading-5 text-[var(--cf-text-muted)]">
+                                    Espacios académicos con mayor cantidad de reservas.
+                                </p>
                             </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 truncate">Aulas en Mantenimiento</dt>
-                                    <dd class="text-3xl font-semibold text-gray-900">{{ kpis.aulas_mantenimiento }}</dd>
-                                </dl>
-                            </div>
+                            <span class="w-fit rounded-full border border-[var(--cf-border)] bg-[var(--cf-surface-muted)] px-2.5 py-1 text-xs font-bold text-[var(--cf-text-muted)]">
+                                Mayor demanda
+                            </span>
                         </div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 gap-8 lg:grid-cols-2 mb-8">
-                    <div class="bg-white shadow rounded-lg p-6">
-                        <h3 class="text-lg font-medium text-gray-900 mb-4">Estado de Reservas</h3>
-                        <div class="relative h-64">
-                            <canvas ref="chartEstados"></canvas>
-                        </div>
-                    </div>
-
-                    <div class="bg-white shadow rounded-lg p-6">
-                        <h3 class="text-lg font-medium text-gray-900 mb-4">Aulas Más Solicitadas</h3>
-                        <div class="relative h-64">
+                        <div class="relative h-64 sm:h-[18rem]">
                             <canvas ref="chartAulas"></canvas>
                         </div>
-                    </div>
+                    </article>
                 </div>
 
-                <div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
-                    
-                    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
-                        <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
-                            <h3 class="text-lg leading-6 font-medium text-gray-900">Próximas Reservas</h3>
+                <div class="grid grid-cols-1 gap-5 xl:grid-cols-2">
+                    <article class="overflow-hidden rounded-2xl border border-[var(--cf-border)] bg-[var(--cf-surface)] shadow-sm">
+                        <div class="border-b border-[var(--cf-border)] px-4 py-3.5 sm:px-5">
+                            <h2 class="text-base font-bold text-[var(--cf-heading)]">Próximas reservas</h2>
+                            <p class="mt-1 text-xs text-[var(--cf-text-muted)]">Agenda inmediata de espacios académicos.</p>
                         </div>
-                        <ul role="list" class="divide-y divide-gray-200">
-                            <li v-for="reserva in listas.proximas_reservas" :key="reserva.id" class="px-4 py-4 sm:px-6">
-                                <div class="flex items-center justify-between">
-                                    <p class="text-sm font-medium text-blue-600 truncate">
-                                        {{ reserva.aula.modulo.nombre }} - Aula {{ reserva.aula_codigo }}
-                                    </p>
-                                    <div class="ml-2 flex-shrink-0 flex">
-                                        <p class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                            {{ reserva.estado }}
+                        <ul role="list" class="divide-y divide-[var(--cf-border)]">
+                            <li v-for="reserva in listas.proximas_reservas" :key="reserva.id" class="px-4 py-3 sm:px-5">
+                                <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                    <div class="min-w-0">
+                                        <p class="break-words text-sm font-bold text-[var(--cf-heading)]">
+                                            {{ reserva.aula.modulo.nombre }} - Aula {{ reserva.aula_codigo }}
                                         </p>
+                                        <div class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-[var(--cf-text-muted)]">
+                                            <span class="inline-flex items-center gap-1.5">
+                                                <CalendarIcon aria-hidden="true" class="h-4 w-4" />
+                                                {{ formatDate(reserva.inicio) }}
+                                            </span>
+                                            <span>{{ reserva.usuario?.nombre || 'Usuario' }}</span>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="mt-2 sm:flex sm:justify-between">
-                                    <div class="sm:flex">
-                                        <p class="flex items-center text-sm text-gray-500">
-                                            <CalendarIcon class="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" />
-                                            {{ formatDate(reserva.inicio) }}
-                                        </p>
-                                    </div>
-                                    <div class="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                                        <p>{{ reserva.usuario?.nombre || 'Usuario' }}</p>
-                                    </div>
+                                    <span
+                                        class="inline-flex w-fit items-center rounded-full border px-2.5 py-0.5 text-xs font-bold"
+                                        :class="reservationStatusClass(reserva.estado)"
+                                    >
+                                        {{ reserva.estado }}
+                                    </span>
                                 </div>
                             </li>
-                            <li v-if="listas.proximas_reservas.length === 0" class="px-4 py-4 text-sm text-gray-500 text-center">
+                            <li v-if="listas.proximas_reservas.length === 0" class="px-4 py-6 text-center text-sm text-[var(--cf-text-muted)] sm:px-5">
                                 No hay reservas próximas.
                             </li>
                         </ul>
-                    </div>
+                    </article>
 
-                    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
-                        <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
-                            <h3 class="text-lg leading-6 font-medium text-gray-900">Activos en Mantenimiento</h3>
+                    <article class="overflow-hidden rounded-2xl border border-[var(--cf-border)] bg-[var(--cf-surface)] shadow-sm">
+                        <div class="border-b border-[var(--cf-border)] px-4 py-3.5 sm:px-5">
+                            <h2 class="text-base font-bold text-[var(--cf-heading)]">Activos en mantenimiento</h2>
+                            <p class="mt-1 text-xs text-[var(--cf-text-muted)]">Equipamiento registrado con atención pendiente.</p>
                         </div>
-                        <ul role="list" class="divide-y divide-gray-200">
-                            <li v-for="activo in listas.activos_mantenimiento" :key="activo.codigo" class="px-4 py-4 sm:px-6">
-                                <div class="flex items-center justify-between">
-                                    <p class="text-sm font-medium text-gray-900 truncate">
-                                        {{ activo.descripcion }}
-                                    </p>
-                                    <p class="text-sm text-gray-500">{{ activo.tipo_activo?.nombre }}</p>
-                                </div>
-                                <div class="mt-2">
-                                    <p class="text-sm text-gray-500">
-                                        Código: <span class="font-mono">{{ activo.codigo }}</span>
+                        <ul role="list" class="divide-y divide-[var(--cf-border)]">
+                            <li v-for="activo in listas.activos_mantenimiento" :key="activo.codigo" class="px-4 py-3 sm:px-5">
+                                <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                    <div class="min-w-0">
+                                        <p class="break-words text-sm font-bold text-[var(--cf-heading)]">
+                                            {{ activo.descripcion }}
+                                        </p>
+                                        <p class="mt-1.5 text-xs text-[var(--cf-text-muted)]">
+                                            Tipo: {{ activo.tipo_activo?.nombre }}
+                                        </p>
+                                    </div>
+                                    <p class="w-fit rounded-full border border-[var(--cf-border)] bg-[var(--cf-surface-muted)] px-2.5 py-0.5 font-mono text-xs font-bold text-[var(--cf-text)]">
+                                        {{ activo.codigo }}
                                     </p>
                                 </div>
                             </li>
-                            <li v-if="listas.activos_mantenimiento.length === 0" class="px-4 py-4 text-sm text-gray-500 text-center">
+                            <li v-if="listas.activos_mantenimiento.length === 0" class="px-4 py-6 text-center text-sm text-[var(--cf-text-muted)] sm:px-5">
                                 Todo operativo. Ningún activo en mantenimiento.
                             </li>
                         </ul>
-                    </div></div>
-
-                <!-- [NUEVO] Widget de Predicciones AI (CU-14) -->
-                <div v-if="listas.predicciones && listas.predicciones.length > 0" class="mt-8">
-                    <div class="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-lg shadow-lg p-6 text-white">
-                        <h3 class="text-lg font-bold mb-2 flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
-                            Predicción de Demanda Inteligente (Mañana)
-                        </h3>
-                        <p class="text-indigo-100 text-sm mb-4">Nuestro modelo predice alta saturación en los siguientes espacios. Se recomienda bloquear reservas de mantenimiento.</p>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div v-for="(pred, index) in listas.predicciones" :key="index" class="bg-white rounded p-3 shadow text-gray-800">
-                                <div class="flex justify-between items-center mb-2">
-                                    <span class="font-bold text-xl">{{ pred.aula }}</span>
-                                    <span class="px-2 py-1 rounded text-xs font-bold text-white shadow-sm" 
-                                          :class="pred.nivel_demanda === 'Critico' ? 'bg-red-500' : 'bg-yellow-500'">
-                                        {{ pred.nivel_demanda }}
-                                    </span>
-                                </div>
-                                <div class="text-sm">
-                                    <p class="font-medium">Probabilidad: <span class="font-bold">{{ pred.probabilidad }}%</span></p>
-                                    <p class="text-gray-600">Hora Pico: {{ pred.hora_pico }}</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    </article>
                 </div>
 
+                <section
+                    v-if="listas.predicciones && listas.predicciones.length > 0"
+                    class="rounded-2xl border border-[var(--cf-border)] bg-[var(--cf-surface)] p-4 shadow-sm sm:p-5"
+                >
+                    <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div class="max-w-3xl">
+                            <p class="text-xs font-bold uppercase tracking-[0.16em] text-[#06B6D4]">
+                                Módulo demostrativo
+                            </p>
+                            <h2 class="mt-1.5 text-lg font-bold text-[var(--cf-heading)]">Predicción de demanda</h2>
+                            <p class="mt-1 text-sm leading-6 text-[var(--cf-text-muted)]">
+                                Estimación orientativa de espacios con posible alta demanda para la siguiente jornada.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                        <article
+                            v-for="(pred, index) in listas.predicciones"
+                            :key="index"
+                            class="rounded-2xl border border-[var(--cf-border)] bg-[var(--cf-surface-muted)] p-3.5"
+                        >
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                <h3 class="break-words text-base font-bold text-[var(--cf-heading)]">{{ pred.aula }}</h3>
+                                <span
+                                    class="inline-flex w-fit items-center rounded-full border px-2.5 py-0.5 text-xs font-bold"
+                                    :class="demandLevelClass(pred.nivel_demanda)"
+                                >
+                                    {{ pred.nivel_demanda }}
+                                </span>
+                            </div>
+                            <dl class="mt-3 grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
+                                <div>
+                                    <dt class="font-semibold text-[var(--cf-text-muted)]">Probabilidad</dt>
+                                    <dd class="mt-1 font-bold text-[var(--cf-heading)]">{{ pred.probabilidad }}%</dd>
+                                </div>
+                                <div>
+                                    <dt class="font-semibold text-[var(--cf-text-muted)]">Hora pico</dt>
+                                    <dd class="mt-1 font-bold text-[var(--cf-heading)]">{{ pred.hora_pico }}</dd>
+                                </div>
+                            </dl>
+                        </article>
+                    </div>
+                </section>
             </div>
-        </div>
+        </section>
     </AuthenticatedLayout>
 </template>
