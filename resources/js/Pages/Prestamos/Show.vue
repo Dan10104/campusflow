@@ -47,13 +47,13 @@ const devolver = () => {
 
 const getStatusColor = (status) => {
     const colors = {
-        aprobado: "bg-teal-100 text-teal-800",
-        pendiente: "bg-yellow-100 text-yellow-800",
-        entregado: "bg-blue-100 text-blue-800",
-        devuelto: "bg-green-100 text-green-800",
-        cancelada: "bg-red-100 text-red-800",
+        aprobado: "border border-blue-200 bg-blue-50 text-blue-800",
+        pendiente: "border border-amber-200 bg-amber-50 text-amber-800",
+        entregado: "border border-blue-200 bg-[#EFF6FF] text-blue-800",
+        devuelto: "border border-emerald-200 bg-emerald-50 text-emerald-800",
+        cancelada: "border border-red-200 bg-red-50 text-red-800",
     };
-    return colors[status] || "bg-gray-100 text-gray-800";
+    return colors[status] || "border border-slate-200 bg-slate-100 text-slate-700";
 };
 </script>
 
@@ -61,220 +61,175 @@ const getStatusColor = (status) => {
     <Head title="Detalle de Préstamo" />
 
     <AuthenticatedLayout>
-        <template #header>
-            <div class="flex items-center">
-                <button
-                    @click="router.visit(route('prestamos.index'))"
-                    class="mr-4 text-gray-500 hover:text-gray-700"
-                >
-                    <ArrowLeftIcon class="h-5 w-5" />
-                </button>
-                <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                    Detalle de Solicitud #{{ prestamo.id }}
-                </h2>
-            </div>
-        </template>
-
-        <div class="py-12">
-            <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <!-- Header Status -->
-                    <div
-                        class="px-6 py-5 border-b border-gray-200 flex justify-between items-center bg-gray-50"
-                    >
-                        <div>
-                            <span class="text-sm text-gray-500"
-                                >Estado Actual</span
+        <div class="min-h-screen w-full bg-[#F5F7FB] text-[#0F172A]">
+            <div class="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+                <section class="rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-sm sm:p-6">
+                    <div class="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+                        <div class="min-w-0">
+                            <button
+                                type="button"
+                                @click="router.visit(route('prestamos.index'))"
+                                class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm font-bold text-[#334155] shadow-sm transition hover:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2"
                             >
-                            <div class="mt-1">
+                                <ArrowLeftIcon class="h-5 w-5 shrink-0 text-[#2563EB]" aria-hidden="true" />
+                                Volver a préstamos
+                            </button>
+
+                            <div class="mt-5 flex flex-wrap items-center gap-3">
+                                <p class="text-xs font-bold uppercase tracking-widest text-[#2563EB]">
+                                    Detalle de solicitud
+                                </p>
                                 <span
-                                    class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full uppercase tracking-wide"
+                                    class="inline-flex items-center justify-center rounded-full px-3 py-1 text-center text-xs font-semibold uppercase leading-none"
                                     :class="getStatusColor(prestamo.estado)"
                                 >
                                     {{ prestamo.estado }}
                                 </span>
                             </div>
+
+                            <h1 class="mt-2 text-3xl font-bold tracking-tight text-[#0F172A]">
+                                Solicitud #{{ prestamo.id }}
+                            </h1>
+                            <p class="mt-2 max-w-3xl text-sm leading-6 text-[#475569]">
+                                Consulta los datos del préstamo, el activo asociado y las acciones disponibles.
+                            </p>
                         </div>
-                        <div class="flex space-x-3">
-                            <!-- Botones de Acción (Admin UI) -->
+
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
                             <button
                                 v-if="isAdmin && (prestamo.estado === 'pendiente' || prestamo.estado === 'aprobado')"
                                 @click="entregar"
-                                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-transparent bg-[#2563EB] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#1D4ED8] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2"
                             >
-                                <HandThumbUpIcon
-                                    class="-ml-1 mr-2 h-5 w-5"
-                                    aria-hidden="true"
-                                />
-                                Entregar Activo
+                                <HandThumbUpIcon class="h-5 w-5 shrink-0" aria-hidden="true" />
+                                Entregar activo
                             </button>
 
                             <button
                                 v-if="isAdmin && prestamo.estado === 'entregado'"
                                 @click="devolver"
-                                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-transparent bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
                             >
-                                <ArrowPathIcon
-                                    class="-ml-1 mr-2 h-5 w-5"
-                                    aria-hidden="true"
-                                />
-                                Registrar Devolución
+                                <ArrowPathIcon class="h-5 w-5 shrink-0" aria-hidden="true" />
+                                Registrar devolución
                             </button>
                         </div>
                     </div>
+                </section>
 
-                    <div class="px-6 py-6">
-                        <dl
-                            class="grid grid-cols-1 gap-x-4 gap-y-8 sm:grid-cols-2"
-                        >
-                            <!-- Activo Info -->
-                            <div class="sm:col-span-2">
-                                <dt
-                                    class="text-sm font-medium text-gray-500 flex items-center"
-                                >
-                                    <CubeIcon class="h-5 w-5 mr-1" />
-                                    Activo Solicitado
-                                </dt>
-                                <dd
-                                    class="mt-1 text-lg font-medium text-gray-900"
-                                >
-                                    {{ prestamo.activo.descripcion }}
-                                </dd>
-                                <dd class="mt-1 text-sm text-gray-500">
-                                    Código: {{ prestamo.activo_codigo }} | Tipo:
-                                    {{
-                                        prestamo.activo.tipo_activo?.nombre ||
-                                        "General"
-                                    }}
-                                </dd>
+                <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                    <main class="space-y-6 lg:col-span-2">
+                        <section class="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-sm">
+                            <div class="border-b border-[#E2E8F0] px-5 py-5 sm:px-6">
+                                <h2 class="text-lg font-bold text-[#0F172A]">
+                                    Información del préstamo
+                                </h2>
+                                <p class="mt-1 text-sm text-[#475569]">
+                                    Datos principales de la solicitud registrada.
+                                </p>
                             </div>
 
-                            <!-- Usuario Info -->
-                            <div class="sm:col-span-1">
-                                <dt
-                                    class="text-sm font-medium text-gray-500 flex items-center"
-                                >
-                                    <UserIcon class="h-5 w-5 mr-1" />
-                                    Solicitante
-                                </dt>
-                                <dd class="mt-1 text-sm text-gray-900">
-                                    {{ prestamo.usuario.name }}
-                                </dd>
-                                <dd class="text-xs text-gray-500">
-                                    {{ prestamo.usuario_id }}
-                                </dd>
-                            </div>
-
-                            <!-- QR Code Visual -->
-                            <div
-                                class="sm:col-span-2 mt-4 bg-gray-50 rounded-lg p-4 border border-gray-100 flex items-center justify-between"
-                            >
-                                <div>
-                                    <h4
-                                        class="text-sm font-medium text-gray-900 flex items-center mb-1"
-                                    >
-                                        <QrCodeIcon class="h-5 w-5 mr-1" />
-                                        Código QR del Activo
-                                    </h4>
-                                    <p class="text-xs text-gray-500">
-                                        Muestra o escanea este código para la
-                                        entrega/devolución mediante la App
-                                        Scanner.
-                                    </p>
-                                    <p
-                                        class="mt-2 text-xs font-mono text-gray-600 break-all"
-                                    >
-                                        {{ prestamo.activo_codigo }}
-                                    </p>
+                            <dl class="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 sm:p-6">
+                                <div class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4 sm:col-span-2">
+                                    <dt class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-[#64748B]">
+                                        <CubeIcon class="h-5 w-5 shrink-0 text-[#2563EB]" aria-hidden="true" />
+                                        Activo solicitado
+                                    </dt>
+                                    <dd class="mt-2 break-words text-lg font-bold text-[#0F172A]">
+                                        {{ prestamo.activo.descripcion }}
+                                    </dd>
+                                    <dd class="mt-2 break-words text-sm font-semibold text-[#475569]">
+                                        Código:
+                                        <span class="break-all font-mono text-[#334155]">{{ prestamo.activo_codigo }}</span>
+                                        | Tipo:
+                                        {{
+                                            prestamo.activo.tipo_activo?.nombre ||
+                                            "General"
+                                        }}
+                                    </dd>
                                 </div>
+
+                                <div class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                                    <dt class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-[#64748B]">
+                                        <UserIcon class="h-5 w-5 shrink-0 text-[#2563EB]" aria-hidden="true" />
+                                        Solicitante
+                                    </dt>
+                                    <dd class="mt-2 break-words text-sm font-bold text-[#0F172A]">
+                                        {{ prestamo.usuario.name }}
+                                    </dd>
+                                    <dd class="mt-1 text-xs font-semibold text-[#475569]">
+                                        {{ prestamo.usuario_id }}
+                                    </dd>
+                                </div>
+
+                                <div class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                                    <dt class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-[#64748B]">
+                                        <CalendarIcon class="h-5 w-5 shrink-0 text-[#2563EB]" aria-hidden="true" />
+                                        Horario previsto
+                                    </dt>
+                                    <dd class="mt-2 text-sm font-semibold text-[#0F172A]">
+                                        Inicio:
+                                        {{
+                                            new Date(
+                                                prestamo.inicio_previsto,
+                                            ).toLocaleString()
+                                        }}
+                                    </dd>
+                                    <dd class="mt-1 text-sm font-semibold text-[#475569]">
+                                        Fin:
+                                        {{
+                                            new Date(
+                                                prestamo.fin_previsto,
+                                            ).toLocaleString()
+                                        }}
+                                    </dd>
+                                </div>
+
                                 <div
-                                    class="bg-white p-2 rounded shadow-sm border border-gray-200"
+                                    v-if="prestamo.entregado_en"
+                                    class="rounded-xl border border-blue-200 bg-[#EFF6FF] p-4"
                                 >
-                                    <QrcodeVue
-                                        v-if="prestamo.activo.qr_code"
-                                        :value="prestamo.activo.qr_code"
-                                        :size="100"
-                                        level="M"
-                                    />
-                                    <div
-                                        v-else
-                                        class="text-center text-xs text-gray-400 w-24 flex flex-col items-center"
-                                    >
-                                        <QrCodeIcon class="h-8 w-8 mx-auto" />
-                                        Sin QR
-                                    </div>
+                                    <dt class="text-xs font-bold uppercase tracking-wide text-blue-800">
+                                        Entregado el
+                                    </dt>
+                                    <dd class="mt-2 text-sm font-bold text-[#0F172A]">
+                                        {{
+                                            new Date(
+                                                prestamo.entregado_en,
+                                            ).toLocaleString()
+                                        }}
+                                    </dd>
                                 </div>
-                            </div>
 
-                            <!-- Fechas -->
-                            <div class="sm:col-span-1">
-                                <dt
-                                    class="text-sm font-medium text-gray-500 flex items-center"
+                                <div
+                                    v-if="prestamo.devuelto_en"
+                                    class="rounded-xl border border-emerald-200 bg-emerald-50 p-4"
                                 >
-                                    <CalendarIcon class="h-5 w-5 mr-1" />
-                                    Horario Previsto
-                                </dt>
-                                <dd class="mt-1 text-sm text-gray-900">
-                                    Inicio:
-                                    {{
-                                        new Date(
-                                            prestamo.inicio_previsto,
-                                        ).toLocaleString()
-                                    }}
-                                </dd>
-                                <dd class="text-sm text-gray-900">
-                                    Fin:
-                                    {{
-                                        new Date(
-                                            prestamo.fin_previsto,
-                                        ).toLocaleString()
-                                    }}
-                                </dd>
-                            </div>
+                                    <dt class="text-xs font-bold uppercase tracking-wide text-emerald-800">
+                                        Devuelto el
+                                    </dt>
+                                    <dd class="mt-2 text-sm font-bold text-[#0F172A]">
+                                        {{
+                                            new Date(
+                                                prestamo.devuelto_en,
+                                            ).toLocaleString()
+                                        }}
+                                    </dd>
+                                    <dd class="mt-1 break-words text-xs font-semibold text-emerald-800">
+                                        Condición: {{ prestamo.condicion_entrada }}
+                                    </dd>
+                                </div>
+                            </dl>
+                        </section>
 
-                            <!-- Fechas Reales -->
-                            <div
-                                v-if="prestamo.entregado_en"
-                                class="sm:col-span-1 bg-blue-50 p-3 rounded-md"
-                            >
-                                <dt class="text-xs font-medium text-blue-700">
-                                    Entregado el
-                                </dt>
-                                <dd class="mt-1 text-sm text-blue-900">
-                                    {{
-                                        new Date(
-                                            prestamo.entregado_en,
-                                        ).toLocaleString()
-                                    }}
-                                </dd>
-                            </div>
-
-                            <div
-                                v-if="prestamo.devuelto_en"
-                                class="sm:col-span-1 bg-green-50 p-3 rounded-md"
-                            >
-                                <dt class="text-xs font-medium text-green-700">
-                                    Devuelto el
-                                </dt>
-                                <dd class="mt-1 text-sm text-green-900">
-                                    {{
-                                        new Date(
-                                            prestamo.devuelto_en,
-                                        ).toLocaleString()
-                                    }}
-                                </dd>
-                                <dd class="text-xs text-green-700 mt-1">
-                                    Condición: {{ prestamo.condicion_entrada }}
-                                </dd>
-                            </div>
-                        </dl>
-
-                        <!-- Blockchain Visualizer Link (Optional) -->
-                        <div class="mt-8 border-t border-gray-100 pt-6">
-                            <h4 class="text-sm font-medium text-gray-900">
+                        <section class="rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-sm sm:p-6">
+                            <h2 class="text-lg font-bold text-[#0F172A]">
                                 Auditoría Blockchain
-                            </h4>
-                            <div class="mt-2 flex items-center">
+                            </h2>
+                            <p class="mt-1 text-sm leading-6 text-[#475569]">
+                                Acceso a la trazabilidad del activo cuando el perfil tiene permisos administrativos.
+                            </p>
+                            <div class="mt-4">
                                 <a
                                     v-if="isAdmin"
                                     :href="
@@ -283,13 +238,69 @@ const getStatusColor = (status) => {
                                             prestamo.activo_codigo,
                                         )
                                     "
-                                    class="text-indigo-600 hover:text-indigo-500 text-sm font-medium"
+                                    class="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm font-bold text-[#2563EB] shadow-sm transition hover:bg-[#EFF6FF] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2"
                                 >
-                                    Ver Historial Inmutable del Activo &rarr;
+                                    Ver historial inmutable del activo
                                 </a>
                             </div>
-                        </div>
-                    </div>
+                        </section>
+                    </main>
+
+                    <aside class="space-y-6">
+                        <section class="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-sm">
+                            <div class="border-b border-[#E2E8F0] px-5 py-5">
+                                <h2 class="flex items-center gap-2 text-lg font-bold text-[#0F172A]">
+                                    <QrCodeIcon class="h-5 w-5 shrink-0 text-[#2563EB]" aria-hidden="true" />
+                                    Código QR del activo
+                                </h2>
+                                <p class="mt-1 text-sm leading-6 text-[#475569]">
+                                    Muestra o escanea este código para la entrega/devolución mediante la App Scanner.
+                                </p>
+                            </div>
+
+                            <div class="p-5 sm:p-6">
+                                <div class="mx-auto flex w-full max-w-xs flex-col items-center justify-center">
+                                    <div class="flex w-full items-center justify-center rounded-2xl border border-[#E2E8F0] bg-white p-4">
+                                        <QrcodeVue
+                                            v-if="prestamo.activo.qr_code"
+                                            :value="prestamo.activo.qr_code"
+                                            :size="180"
+                                            level="M"
+                                        />
+                                        <div
+                                            v-else
+                                            class="flex min-h-32 flex-col items-center justify-center text-center text-[#64748B]"
+                                        >
+                                            <QrCodeIcon class="h-12 w-12" aria-hidden="true" />
+                                            <p class="mt-2 text-sm font-semibold">Sin QR</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-4 flex min-h-14 w-full items-center justify-center rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3 text-center">
+                                        <span class="break-all font-mono text-xs font-semibold leading-5 text-[#475569]">
+                                            {{ prestamo.activo_codigo }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-sm">
+                            <h2 class="text-sm font-bold uppercase tracking-wide text-[#334155]">
+                                Estado actual
+                            </h2>
+                            <span
+                                class="mt-4 inline-flex items-center justify-center rounded-full px-3 py-1 text-center text-xs font-semibold uppercase leading-none"
+                                :class="getStatusColor(prestamo.estado)"
+                            >
+                                {{ prestamo.estado }}
+                            </span>
+
+                            <div v-if="form.processing" class="mt-4 rounded-xl border border-blue-200 bg-[#EFF6FF] px-4 py-3 text-sm font-bold text-blue-800">
+                                Procesando acción...
+                            </div>
+                        </section>
+                    </aside>
                 </div>
             </div>
         </div>
