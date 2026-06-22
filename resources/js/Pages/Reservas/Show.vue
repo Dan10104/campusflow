@@ -1,8 +1,7 @@
 <script setup>
-import { ref } from 'vue';
 import { Head, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { 
+import {
     ArrowLeftIcon,
     QrCodeIcon,
     ClockIcon,
@@ -50,14 +49,14 @@ const formatFechaHora = (fecha) => {
 
 const getEstadoBadge = (estado) => {
     const badges = {
-        'confirmada': 'bg-green-100 text-green-800',
-        'aprobada': 'bg-blue-100 text-blue-800',
-        'pendiente': 'bg-yellow-100 text-yellow-800',
-        'en_uso': 'bg-purple-100 text-purple-800',
-        'completada': 'bg-gray-100 text-gray-800',
-        'cancelada': 'bg-red-100 text-red-800'
+        'confirmada': 'border border-emerald-200 bg-emerald-100 text-emerald-800',
+        'aprobada': 'border border-emerald-200 bg-emerald-100 text-emerald-800',
+        'pendiente': 'border border-amber-200 bg-amber-100 text-amber-800',
+        'en_uso': 'border border-blue-200 bg-blue-100 text-blue-800',
+        'completada': 'border border-slate-200 bg-slate-100 text-slate-700',
+        'cancelada': 'border border-red-200 bg-red-100 text-red-800'
     };
-    return badges[estado] || 'bg-gray-100 text-gray-800';
+    return badges[estado] || 'border border-slate-200 bg-slate-100 text-slate-700';
 };
 
 const getEstadoTexto = (estado) => {
@@ -76,12 +75,12 @@ const puedeHacerCheckin = () => {
     if (props.reserva.estado !== 'confirmada' && props.reserva.estado !== 'aprobada') {
         return false;
     }
-    
+
     const ahora = new Date();
     const inicio = new Date(props.reserva.inicio);
     const ventanaInicio = new Date(inicio.getTime() - 15 * 60000); // 15 minutos antes
     const fin = new Date(props.reserva.fin);
-    
+
     return ahora >= ventanaInicio && ahora <= fin;
 };
 
@@ -102,7 +101,7 @@ const hacerCheckout = () => {
 };
 
 const cancelarReserva = () => {
-    if (confirm('¿Estás seguro de que deseas cancelar esta reserva?')) {
+    if (confirm('Estas seguro de que deseas cancelar esta reserva?')) {
         router.delete(route('reservas.destroy', props.reserva.id));
     }
 };
@@ -116,303 +115,326 @@ const getCheckinTexto = (tipo) => {
     <Head :title="`Reserva - Aula ${reserva.aula.codigo}`" />
 
     <AuthenticatedLayout>
-        <!-- Header -->
-        <div class="py-6">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex items-center mb-4">
-                    <button
-                        @click="volver"
-                        class="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-700"
-                    >
-                        <ArrowLeftIcon class="h-5 w-5 mr-1" />
-                        Volver a mis reservas
-                    </button>
-                </div>
-
-                <div class="md:flex md:items-center md:justify-between">
-                    <div class="flex-1 min-w-0">
-                        <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
-                            Aula {{ reserva.aula.codigo }}
-                        </h2>
-                        <div class="mt-1 flex items-center">
-                            <span
-                                :class="getEstadoBadge(reserva.estado)"
-                                class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
+        <div class="min-h-screen w-full bg-[#F5F7FB] text-[#0F172A]">
+            <div class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+                <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <div class="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+                        <div class="min-w-0">
+                            <button
+                                @click="volver"
+                                class="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-blue-700 shadow-sm transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                             >
-                                {{ getEstadoTexto(reserva.estado) }}
-                            </span>
+                                <ArrowLeftIcon class="h-4 w-4" aria-hidden="true" />
+                                Volver a mis reservas
+                            </button>
+
+                            <div class="mt-5 flex flex-wrap items-center gap-3">
+                                <p class="text-xs font-bold uppercase tracking-widest text-blue-600">
+                                    Detalle operativo
+                                </p>
+                                <span
+                                    :class="getEstadoBadge(reserva.estado)"
+                                    class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold"
+                                >
+                                    {{ getEstadoTexto(reserva.estado) }}
+                                </span>
+                            </div>
+
+                            <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+                                Aula {{ reserva.aula.codigo }}
+                            </h1>
+                            <p class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm font-medium text-slate-600">
+                                <span class="inline-flex items-center gap-2">
+                                    <CalendarIcon class="h-4 w-4 text-blue-600" aria-hidden="true" />
+                                    {{ formatFecha(reserva.inicio) }}
+                                </span>
+                                <span class="inline-flex items-center gap-2">
+                                    <ClockIcon class="h-4 w-4 text-blue-600" aria-hidden="true" />
+                                    {{ formatHora(reserva.inicio) }} - {{ formatHora(reserva.fin) }}
+                                </span>
+                            </p>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                v-if="puedeHacerCheckin() && !tieneCheckin()"
+                                @click="hacerCheckin"
+                                class="inline-flex items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 shadow-sm transition hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                            >
+                                <CheckCircleIcon class="mr-2 h-5 w-5" aria-hidden="true" />
+                                Hacer check-in
+                            </button>
+
+                            <button
+                                v-if="reserva.estado === 'en_uso'"
+                                @click="hacerCheckout"
+                                class="inline-flex items-center justify-center rounded-xl border border-transparent bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                            >
+                                Hacer check-out
+                            </button>
+
+                            <button
+                                v-if="['confirmada', 'aprobada', 'pendiente'].includes(reserva.estado)"
+                                @click="cancelarReserva"
+                                class="inline-flex items-center justify-center rounded-xl border border-transparent bg-red-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                            >
+                                <XCircleIcon class="mr-2 h-5 w-5" aria-hidden="true" />
+                                Cancelar reserva
+                            </button>
                         </div>
                     </div>
+                </section>
 
-                    <!-- Acciones -->
-                    <div class="mt-4 flex flex-wrap gap-2 md:mt-0 md:ml-4">
-                        <button
-                            v-if="puedeHacerCheckin() && !tieneCheckin()"
-                            @click="hacerCheckin"
-                            class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                        >
-                            <CheckCircleIcon class="h-5 w-5 mr-2" />
-                            Hacer check-in
-                        </button>
-
-                        <button
-                            v-if="reserva.estado === 'en_uso'"
-                            @click="hacerCheckout"
-                            class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                        >
-                            Hacer check-out
-                        </button>
-
-                        <button
-                            v-if="['confirmada', 'aprobada', 'pendiente'].includes(reserva.estado)"
-                            @click="cancelarReserva"
-                            class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                        >
-                            <XCircleIcon class="h-5 w-5 mr-2" />
-                            Cancelar reserva
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Contenido -->
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
-            <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                <!-- Columna principal -->
-                <div class="lg:col-span-2 space-y-6">
-                    <!-- Detalles de la reserva -->
-                    <div class="bg-white shadow-sm rounded-lg border border-gray-200">
-                        <div class="px-6 py-5 border-b border-gray-200">
-                            <h3 class="text-lg font-medium text-gray-900">
-                                Detalles de la Reserva
-                            </h3>
-                        </div>
-                        <div class="px-6 py-5">
-                            <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
-                                <div class="sm:col-span-2">
-                                    <dt class="text-sm font-medium text-gray-500 flex items-center">
-                                        <CalendarIcon class="h-5 w-5 mr-2 text-gray-400" />
-                                        Fecha
-                                    </dt>
-                                    <dd class="mt-1 text-sm text-gray-900">{{ formatFecha(reserva.inicio) }}</dd>
+                <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
+                    <div class="space-y-6 xl:col-span-8">
+                        <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                            <div class="border-b border-slate-200 px-5 py-5 sm:px-6">
+                                <p class="border-l-4 border-blue-600 pl-3 text-sm font-bold text-slate-900">
+                                    Informacion de la reserva
+                                </p>
+                                <h2 class="mt-1 text-xl font-bold text-slate-900">
+                                    Datos principales
+                                </h2>
+                            </div>
+                            <dl class="grid gap-4 p-5 sm:grid-cols-2 sm:p-6">
+                                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                    <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Fecha</dt>
+                                    <dd class="mt-1 text-sm font-semibold text-slate-900">{{ formatFecha(reserva.inicio) }}</dd>
                                 </div>
-                                <div>
-                                    <dt class="text-sm font-medium text-gray-500">Hora de inicio</dt>
-                                    <dd class="mt-1 text-sm text-gray-900">{{ formatHora(reserva.inicio) }}</dd>
+                                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                    <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Estado</dt>
+                                    <dd class="mt-2">
+                                        <span
+                                            :class="getEstadoBadge(reserva.estado)"
+                                            class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold"
+                                        >
+                                            {{ getEstadoTexto(reserva.estado) }}
+                                        </span>
+                                    </dd>
                                 </div>
-                                <div>
-                                    <dt class="text-sm font-medium text-gray-500">Hora de fin</dt>
-                                    <dd class="mt-1 text-sm text-gray-900">{{ formatHora(reserva.fin) }}</dd>
+                                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                    <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Hora de inicio</dt>
+                                    <dd class="mt-1 text-sm font-semibold text-slate-900">{{ formatHora(reserva.inicio) }}</dd>
                                 </div>
-                                <div v-if="reserva.asistentes_estimados" class="sm:col-span-2">
-                                    <dt class="text-sm font-medium text-gray-500">Asistentes estimados</dt>
-                                    <dd class="mt-1 text-sm text-gray-900">{{ reserva.asistentes_estimados }} personas</dd>
+                                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                    <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Hora de fin</dt>
+                                    <dd class="mt-1 text-sm font-semibold text-slate-900">{{ formatHora(reserva.fin) }}</dd>
                                 </div>
-                                <div class="sm:col-span-2">
-                                    <dt class="text-sm font-medium text-gray-500">Propósito</dt>
-                                    <dd class="mt-1 text-sm text-gray-900">{{ reserva.proposito }}</dd>
+                                <div v-if="reserva.asistentes_estimados" class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                    <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Asistentes estimados</dt>
+                                    <dd class="mt-1 text-sm font-semibold text-slate-900">{{ reserva.asistentes_estimados }} personas</dd>
+                                </div>
+                                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
+                                    <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Proposito</dt>
+                                    <dd class="mt-1 text-sm font-medium leading-6 text-slate-900">{{ reserva.proposito }}</dd>
                                 </div>
                             </dl>
-                        </div>
-                    </div>
+                        </section>
 
-                    <!-- Información del aula -->
-                    <div class="bg-white shadow-sm rounded-lg border border-gray-200">
-                        <div class="px-6 py-5 border-b border-gray-200">
-                            <h3 class="text-lg font-medium text-gray-900">
-                                Información del Aula
-                            </h3>
-                        </div>
-                        <div class="px-6 py-5">
-                            <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
-                                <div>
-                                    <dt class="text-sm font-medium text-gray-500">Código</dt>
-                                    <dd class="mt-1 text-sm text-gray-900">{{ reserva.aula.codigo }}</dd>
+                        <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                            <div class="border-b border-slate-200 px-5 py-5 sm:px-6">
+                                <p class="border-l-4 border-blue-600 pl-3 text-sm font-bold text-slate-900">
+                                    Espacio academico
+                                </p>
+                                <h2 class="mt-1 text-xl font-bold text-slate-900">
+                                    Informacion del aula
+                                </h2>
+                            </div>
+                            <dl class="grid gap-4 p-5 sm:grid-cols-2 sm:p-6">
+                                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                    <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Codigo</dt>
+                                    <dd class="mt-1 text-lg font-black text-slate-900">{{ reserva.aula.codigo }}</dd>
                                 </div>
-                                <div>
-                                    <dt class="text-sm font-medium text-gray-500">Capacidad</dt>
-                                    <dd class="mt-1 text-sm text-gray-900">{{ reserva.aula.capacidad }} personas</dd>
+                                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                    <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Capacidad</dt>
+                                    <dd class="mt-1 text-sm font-semibold text-slate-900">{{ reserva.aula.capacidad }} personas</dd>
                                 </div>
-                                <div>
-                                    <dt class="text-sm font-medium text-gray-500">Tipo</dt>
-                                    <dd class="mt-1 text-sm text-gray-900 capitalize">{{ reserva.aula.tipo.replace('_', ' ') }}</dd>
+                                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                    <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Tipo</dt>
+                                    <dd class="mt-1 text-sm font-semibold capitalize text-slate-900">{{ reserva.aula.tipo.replace('_', ' ') }}</dd>
                                 </div>
-                                <div>
-                                    <dt class="text-sm font-medium text-gray-500 flex items-center">
-                                        <MapPinIcon class="h-5 w-5 mr-2 text-gray-400" />
-                                        Ubicación
+                                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                    <dt class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                        <MapPinIcon class="h-4 w-4 text-blue-600" aria-hidden="true" />
+                                        Ubicacion
                                     </dt>
-                                    <dd class="mt-1 text-sm text-gray-900">{{ reserva.aula.modulo.nombre }}</dd>
+                                    <dd class="mt-1 text-sm font-semibold text-slate-900">{{ reserva.aula.modulo.nombre }}</dd>
                                 </div>
-                                <div class="sm:col-span-2">
-                                    <dt class="text-sm font-medium text-gray-500">Facultad</dt>
-                                    <dd class="mt-1 text-sm text-gray-900">
+                                <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
+                                    <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Facultad</dt>
+                                    <dd class="mt-1 text-sm font-semibold text-slate-900">
                                         {{ reserva.aula.modulo.facultad.sigla }} - {{ reserva.aula.modulo.facultad.nombre }}
                                     </dd>
                                 </div>
                             </dl>
-                        </div>
-                    </div>
+                        </section>
 
-                    <!-- Historial de check-ins -->
-                    <div v-if="reserva.checkins && reserva.checkins.length > 0" class="bg-white shadow-sm rounded-lg border border-gray-200">
-                        <div class="px-6 py-5 border-b border-gray-200">
-                            <h3 class="text-lg font-medium text-gray-900">
-                                Historial de Check-ins
-                            </h3>
-                        </div>
-                        <div class="px-6 py-5">
-                            <div class="flow-root">
-                                <ul role="list" class="-mb-8">
+                        <section v-if="reserva.checkins && reserva.checkins.length > 0" class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                            <div class="border-b border-slate-200 px-5 py-5 sm:px-6">
+                                <p class="border-l-4 border-blue-600 pl-3 text-sm font-bold text-slate-900">
+                                    Control de uso
+                                </p>
+                                <h2 class="mt-1 text-xl font-bold text-slate-900">
+                                    Historial de check-ins
+                                </h2>
+                            </div>
+                            <div class="p-5 sm:p-6">
+                                <ul role="list" class="space-y-4">
                                     <li
                                         v-for="(checkin, idx) in reserva.checkins"
                                         :key="checkin.id"
-                                        class="relative pb-8"
+                                        class="relative flex gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4"
                                     >
                                         <span
                                             v-if="idx !== reserva.checkins.length - 1"
-                                            class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
+                                            class="absolute left-7 top-12 h-6 w-px bg-slate-200"
                                             aria-hidden="true"
                                         />
-                                        <div class="relative flex space-x-3">
-                                            <div>
-                                                <span
-                                                    :class="checkin.tipo === 'checkin' ? 'bg-green-500' : 'bg-blue-500'"
-                                                    class="h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white"
-                                                >
-                                                    <ClockIcon class="h-5 w-5 text-white" />
-                                                </span>
-                                            </div>
-                                            <div class="flex min-w-0 flex-1 justify-between space-x-4">
+                                        <span
+                                            :class="checkin.tipo === 'checkin' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-blue-200 bg-blue-50 text-blue-700'"
+                                            class="flex h-8 w-8 flex-none items-center justify-center rounded-full border"
+                                        >
+                                            <ClockIcon class="h-4 w-4" aria-hidden="true" />
+                                        </span>
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
                                                 <div>
-                                                    <p class="text-sm text-gray-900 font-medium">
+                                                    <p class="text-sm font-bold text-slate-900">
                                                         {{ getCheckinTexto(checkin.tipo) }}
                                                     </p>
-                                                    <p class="mt-0.5 text-sm text-gray-500">
+                                                    <p class="mt-1 text-sm text-slate-600">
                                                         {{ formatFechaHora(checkin.registrado_en) }}
                                                     </p>
                                                 </div>
-                                                <div class="whitespace-nowrap text-right text-sm text-gray-500">
+                                                <p class="text-sm font-semibold text-slate-600">
                                                     {{ checkin.origen }}
-                                                </div>
+                                                </p>
                                             </div>
                                         </div>
                                     </li>
                                 </ul>
                             </div>
-                        </div>
+                        </section>
                     </div>
-                </div>
 
-                <!-- Columna lateral -->
-                <div class="space-y-6">
-                    <!-- Código QR -->
-                    <div class="bg-white shadow-sm rounded-lg border border-gray-200">
-                        <div class="px-6 py-5 border-b border-gray-200">
-                            <h3 class="text-lg font-medium text-gray-900">
-                                Código QR
-                            </h3>
-                        </div>
-                        <div class="px-6 py-5">
-                            <div class="flex flex-col items-center">
-                                <div class="p-4 bg-white rounded-lg border-2 border-gray-100 flex items-center justify-center">
-                                    <QrcodeVue v-if="reserva.qr_code && reserva.qr_code.startsWith('http')" :value="reserva.qr_code" :size="200" level="H" />
-                                    <div v-else class="text-center text-gray-400">
-                                        <QrCodeIcon class="h-32 w-32 mx-auto" />
-                                        <p class="text-sm">QR no disponible</p>
+                    <aside class="space-y-6 xl:col-span-4">
+                        <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                            <div class="border-b border-slate-200 px-5 py-5 sm:px-6">
+                                <p class="border-l-4 border-blue-600 pl-3 text-sm font-bold text-slate-900">
+                                    Codigo QR
+                                </p>
+                                <h2 class="mt-1 text-xl font-bold text-slate-900">
+                                    Validacion de reserva
+                                </h2>
+                            </div>
+                            <div class="p-5 sm:p-6">
+                                <div class="flex flex-col items-center rounded-2xl border border-slate-200 bg-white p-5">
+                                    <div class="flex min-h-44 w-full items-center justify-center rounded-xl border border-slate-200 bg-white p-4">
+                                        <QrcodeVue
+                                            v-if="reserva.qr_code && reserva.qr_code.startsWith('http')"
+                                            :value="reserva.qr_code"
+                                            :size="168"
+                                            level="H"
+                                        />
+                                        <div v-else class="text-center text-slate-500">
+                                            <QrCodeIcon class="mx-auto h-24 w-24" aria-hidden="true" />
+                                            <p class="mt-2 text-sm font-semibold text-slate-700">QR no disponible</p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="mt-4 flex gap-2">
-                                     <button @click="router.visit(route('reservas.escanear'))" class="btn btn-primary text-xs">
+                                    <button
+                                        @click="router.visit(route('reservas.escanear'))"
+                                        class="mt-4 inline-flex items-center justify-center rounded-xl border border-transparent bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                    >
                                         Escanear QR
-                                     </button>
+                                    </button>
+                                    <p class="mt-4 max-w-full break-all text-center font-mono text-xs text-slate-600">
+                                        {{ reserva.qr_code }}
+                                    </p>
+                                    <p class="mt-2 text-center text-xs font-medium text-slate-500">
+                                        Muestra este codigo al administrador
+                                    </p>
                                 </div>
-                                <p class="mt-3 text-xs font-mono text-gray-500 text-center break-all">
-                                    {{ reserva.qr_code }}
-                                </p>
-                                <p class="mt-2 text-xs text-gray-500 text-center">
-                                    Muestra este código al administrador
-                                </p>
                             </div>
-                        </div>
-                    </div>
+                        </section>
 
-                    <!-- Usuario -->
-                    <div class="bg-white shadow-sm rounded-lg border border-gray-200">
-                        <div class="px-6 py-5 border-b border-gray-200">
-                            <h3 class="text-lg font-medium text-gray-900">
-                                Usuario
-                            </h3>
-                        </div>
-                        <div class="px-6 py-5">
-                            <div class="flex items-center">
-                                <div class="flex-shrink-0">
-                                    <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                        <UserIcon class="h-6 w-6 text-blue-600" />
+                        <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                            <div class="border-b border-slate-200 px-5 py-5 sm:px-6">
+                                <p class="border-l-4 border-blue-600 pl-3 text-sm font-bold text-slate-900">
+                                    Solicitante
+                                </p>
+                                <h2 class="mt-1 text-xl font-bold text-slate-900">
+                                    Usuario
+                                </h2>
+                            </div>
+                            <div class="p-5 sm:p-6">
+                                <div class="flex min-w-0 items-center gap-4">
+                                    <div class="flex h-12 w-12 flex-none items-center justify-center rounded-xl border border-blue-200 bg-blue-50 text-blue-600">
+                                        <UserIcon class="h-6 w-6" aria-hidden="true" />
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-bold text-slate-900">
+                                            {{ reserva.usuario.nombre }}
+                                        </p>
+                                        <p class="truncate text-sm text-slate-600">
+                                            {{ reserva.usuario.email }}
+                                        </p>
                                     </div>
                                 </div>
-                                <div class="ml-3">
-                                    <p class="text-sm font-medium text-gray-900">
-                                        {{ reserva.usuario.nombre }}
-                                    </p>
-                                    <p class="text-sm text-gray-500">
-                                        {{ reserva.usuario.email }}
-                                    </p>
+                            </div>
+                        </section>
+
+                        <section v-if="reserva.asiento_blockchain" class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                            <div class="border-b border-slate-200 px-5 py-5 sm:px-6">
+                                <p class="border-l-4 border-blue-600 pl-3 text-sm font-bold text-slate-900">
+                                    Trazabilidad
+                                </p>
+                                <h2 class="mt-1 text-xl font-bold text-slate-900">
+                                    Registro Blockchain
+                                </h2>
+                            </div>
+                            <div class="p-5 sm:p-6">
+                                <div class="flex gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                                    <CheckCircleIcon class="mt-0.5 h-5 w-5 flex-none text-emerald-600" aria-hidden="true" />
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-semibold text-emerald-900">
+                                            Esta reserva esta registrada en blockchain
+                                        </p>
+                                        <p class="mt-2 break-all font-mono text-xs text-emerald-700">
+                                            Hash: {{ reserva.asiento_blockchain.hash }}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
+                        </section>
 
-                    <!-- Blockchain -->
-                    <div v-if="reserva.asiento_blockchain" class="bg-white shadow-sm rounded-lg border border-gray-200">
-                        <div class="px-6 py-5 border-b border-gray-200">
-                            <h3 class="text-lg font-medium text-gray-900">
-                                Registro Blockchain
-                            </h3>
-                        </div>
-                        <div class="px-6 py-5">
-                            <div class="flex items-start">
-                                <CheckCircleIcon class="h-5 w-5 text-green-500 mt-0.5" />
-                                <div class="ml-3">
-                                    <p class="text-sm text-gray-700">
-                                        Esta reserva está registrada en blockchain
-                                    </p>
-                                    <p class="mt-2 text-xs font-mono text-gray-500 break-all">
-                                        Hash: {{ reserva.asiento_blockchain.hash }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Estado -->
-                    <div class="bg-white shadow-sm rounded-lg border border-gray-200">
-                        <div class="px-6 py-5">
-                            <h3 class="text-sm font-medium text-gray-900 mb-3">
-                                Estado de la Reserva
-                            </h3>
-                            <div class="space-y-3">
-                                <div class="flex items-center">
+                        <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                            <p class="border-l-4 border-blue-600 pl-3 text-sm font-bold text-slate-900">
+                                Resumen operativo
+                            </p>
+                            <h2 class="mt-1 text-xl font-bold text-slate-900">
+                                Estado de la reserva
+                            </h2>
+                            <div class="mt-5 space-y-3">
+                                <div class="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
                                     <div
                                         :class="[
-                                            'h-2 w-2 rounded-full mr-2',
-                                            reserva.estado === 'cancelada' ? 'bg-red-500' : 
-                                            reserva.estado === 'completada' ? 'bg-gray-400' :
-                                            'bg-green-500'
+                                            'h-3 w-3 rounded-full',
+                                            reserva.estado === 'cancelada' ? 'bg-red-500' :
+                                            reserva.estado === 'completada' ? 'bg-slate-400' :
+                                            'bg-emerald-500'
                                         ]"
                                     />
-                                    <span class="text-sm text-gray-700">
+                                    <span class="text-sm font-bold text-slate-900">
                                         {{ getEstadoTexto(reserva.estado) }}
                                     </span>
                                 </div>
-                                <div v-if="tieneCheckin()" class="flex items-center text-sm text-green-700">
-                                    <CheckCircleIcon class="h-5 w-5 mr-2 text-green-500" />
+                                <div v-if="tieneCheckin()" class="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-700">
+                                    <CheckCircleIcon class="h-5 w-5" aria-hidden="true" />
                                     Check-in realizado
                                 </div>
                             </div>
-                        </div>
-                    </div>
+                        </section>
+                    </aside>
                 </div>
             </div>
         </div>
