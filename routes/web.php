@@ -15,6 +15,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReservaController;
 use App\Http\Controllers\PrestamoController;
 use App\Http\Controllers\AdminReservaController;
+use App\Http\Controllers\LegalPolicyController;
 
 require __DIR__.'/auth.php';
 
@@ -26,6 +27,20 @@ Route::get('/', function () {
         'phpVersion' => PHP_VERSION,
     ]);
 })->name('welcome');
+
+Route::get('/terminos-y-condiciones', [LegalPolicyController::class, 'terms'])
+    ->name('policies.terms');
+
+Route::get('/politica-de-privacidad', [LegalPolicyController::class, 'privacy'])
+    ->name('policies.privacy');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/politicas/aceptar', [LegalPolicyController::class, 'accept'])
+        ->name('policies.accept');
+
+    Route::post('/politicas/aceptar', [LegalPolicyController::class, 'store'])
+        ->name('policies.accept.store');
+});
 
 // Ruta para enviar correos de contacto
 Route::post('/contact', [App\Http\Controllers\ContactController::class, 'send'])->name('contact.send');

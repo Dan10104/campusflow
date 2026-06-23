@@ -260,6 +260,19 @@
   color: var(--cf-text-muted);
 }
 
+.app__footer-link {
+  color: var(--cf-text-muted);
+  font-weight: 800;
+  text-decoration: none;
+  transition: color 160ms ease;
+
+  &:hover,
+  &:focus {
+    color: var(--cf-accent);
+    outline: none;
+  }
+}
+
 .app__guest-brand {
   display: inline-flex;
   align-items: center;

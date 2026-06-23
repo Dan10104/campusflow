@@ -9,6 +9,20 @@
     </a>
 
     <div class="app__header__right">
+      <a
+        :href="route('policies.terms')"
+        class="app__guest-link"
+      >
+        Términos
+      </a>
+
+      <a
+        :href="route('policies.privacy')"
+        class="app__guest-link"
+      >
+        Privacidad
+      </a>
+
       <DarkModeSelector />
 
       <a

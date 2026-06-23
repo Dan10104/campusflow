@@ -34,3 +34,5 @@ yarn-error.log
 CAPITULO9_RECOLECCION_*/
 
 database/scripts/*_backup_antes_fechas.sql
+
+database/scripts/*_backup_antes_fechas.sql

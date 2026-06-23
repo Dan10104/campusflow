@@ -804,6 +804,14 @@ const closeMobileMenu = () => {
                     <p class="text-lg font-black">CampusFlow</p>
                     <p class="mt-1 text-sm text-slate-300">Nexora Tech · Nexora Software S.R.L.</p>
                     <p class="mt-1 text-sm text-slate-400">Santa Cruz de la Sierra, Bolivia · &copy; {{ currentYear }}</p>
+                    <div class="mt-4 flex flex-wrap gap-4 text-sm font-bold text-slate-300">
+                        <Link :href="route('policies.terms')" class="transition hover:text-white">
+                            Términos y Condiciones
+                        </Link>
+                        <Link :href="route('policies.privacy')" class="transition hover:text-white">
+                            Política de Privacidad
+                        </Link>
+                    </div>
                 </div>
                 <Link
                     :href="route('login')"
