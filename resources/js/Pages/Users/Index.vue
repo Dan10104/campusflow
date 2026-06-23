@@ -84,7 +84,7 @@
     <ConfirmationModal
       :show="mostrarConfirmacion"
       title="Eliminar usuario"
-      message="El usuario perdera el acceso al sistema. Confirma que deseas continuar con esta accion."
+      message="El usuario perderá el acceso al sistema. Confirma que deseas continuar con esta acción."
       confirm-text="Eliminar usuario"
       cancel-text="Volver"
       variant="danger"

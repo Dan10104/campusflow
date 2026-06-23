@@ -212,7 +212,7 @@ const motivoResumido = (motivo) => {
 </script>
 
 <template>
-    <Head title="Gestion de reservas" />
+    <Head title="Gestión de reservas" />
 
     <AuthenticatedLayout>
         <div class="min-h-screen bg-[#F5F7FB] px-4 py-6 text-[#0F172A] sm:px-6 lg:px-8">
@@ -221,13 +221,13 @@ const motivoResumido = (motivo) => {
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div class="min-w-0">
                             <span class="inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-blue-700">
-                                Gestion institucional
+                                Gestión institucional
                             </span>
                             <h1 class="mt-3 text-2xl font-black text-[#0F172A] sm:text-3xl">
-                                Gestion de reservas
+                                Gestión de reservas
                             </h1>
                             <p class="mt-2 max-w-3xl text-sm font-medium leading-6 text-[#475569] sm:text-base">
-                                Consulta y supervisa todas las reservas de aulas de la institucion.
+                                Consulta y supervisa todas las reservas de aulas de la institución.
                             </p>
                         </div>
 
@@ -555,7 +555,7 @@ const motivoResumido = (motivo) => {
                             No se encontraron reservas con los filtros seleccionados.
                         </h3>
                         <p class="mt-2 max-w-md text-sm font-medium leading-6 text-[#475569]">
-                            Ajusta la busqueda o limpia los filtros para volver al listado completo.
+                            Ajusta la búsqueda o limpia los filtros para volver al listado completo.
                         </p>
                         <button
                             v-if="filtrosActivos"
@@ -572,7 +572,7 @@ const motivoResumido = (motivo) => {
                         class="flex flex-col gap-3 border-t border-[#E2E8F0] px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
                     >
                         <p class="text-sm font-medium text-[#475569]">
-                            Pagina {{ reservas.current_page }} de {{ reservas.last_page }}
+                            Página {{ reservas.current_page }} de {{ reservas.last_page }}
                         </p>
                         <div class="flex flex-wrap gap-2">
                             <button

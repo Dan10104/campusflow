@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Illuminate\Support\Facades\DB;
-use App\Models\Reserva;
+use App\Exports\DashboardExport;
 use App\Models\Activo;
 use App\Models\Aula;
+use App\Models\Reserva;
+use App\Services\PredictionService;
 use Barryvdh\DomPDF\Facade\Pdf;
-
-use App\Services\PredictionService; // Importar
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
@@ -20,105 +21,102 @@ class DashboardController extends Controller
 
     public function index()
     {
-        // 1. KPIs Principales
+        return Inertia::render('Dashboard', $this->obtenerDatosDashboard());
+    }
+
+    private function obtenerDatosDashboard(): array
+    {
+        // 1. KPIs principales que ya muestra el Dashboard.
         $totalReservasMes = Reserva::whereMonth('inicio', now()->month)->count();
         $activosPrestados = Activo::where('estado', 'prestado')->count();
         $aulasMantenimiento = Aula::where('estado', 'mantenimiento')->count();
 
-        // [NUEVO] Predicciones (CU-14)
+        // 2. Predicciones demostrativas (CU-14).
         $predicciones = $this->predictionService->getHighDemandPrediction();
 
-        // 2. Gráfico: Reservas por Estado (Confirmada, Pendiente, Cancelada, etc.)
+        // 3. Gráfico: reservas por estado.
         $statsEstado = Reserva::select('estado', DB::raw('count(*) as total'))
             ->groupBy('estado')
             ->get();
 
-        // 3. Gráfico: Aulas más solicitadas (Top 5)
+        // 4. Gráfico: aulas más solicitadas.
         $aulasTop = Reserva::select('aula_codigo', DB::raw('count(*) as total'))
-            ->with('aula:codigo,tipo,modulo_codigo') // Asumiendo relación
+            ->with('aula:codigo,tipo,modulo_codigo')
             ->groupBy('aula_codigo')
             ->orderByDesc('total')
             ->limit(5)
             ->get()
-            ->map(function($item) {
-                // Ajusta según cómo accedas al nombre/código del aula
+            ->map(function ($item) {
+                $tipo = $item->aula?->tipo ?: 'aula';
+
                 return [
-                    'nombre' => 'Aula ' . $item->aula_codigo . ' (' . $item->aula->tipo . ')',
-                    'total' => $item->total
+                    'nombre' => 'Aula ' . $item->aula_codigo . ' (' . $tipo . ')',
+                    'total' => $item->total,
                 ];
             });
 
-        // 4. Lista: Próximas Reservas (Para hoy/mañana)
+        // 5. Lista: próximas reservas.
         $proximasReservas = Reserva::with(['usuario', 'aula.modulo'])
             ->where('inicio', '>=', now())
             ->orderBy('inicio', 'asc')
             ->limit(5)
             ->get();
 
-        // 5. Lista: Activos en Mantenimiento
+        // 6. Lista: activos en mantenimiento.
         $activosMantenimiento = Activo::where('estado', 'mantenimiento')
             ->with('tipoActivo')
             ->limit(5)
             ->get();
 
-        return Inertia::render('Dashboard', [
+        return [
             'kpis' => [
                 'reservas_mes' => $totalReservasMes,
                 'activos_prestados' => $activosPrestados,
-                'aulas_mantenimiento' => $aulasMantenimiento
+                'aulas_mantenimiento' => $aulasMantenimiento,
             ],
             'charts' => [
                 'estados' => $statsEstado,
-                'aulas_top' => $aulasTop
+                'aulas_top' => $aulasTop,
             ],
             'listas' => [
                 'proximas_reservas' => $proximasReservas,
                 'activos_mantenimiento' => $activosMantenimiento,
-                'predicciones' => $predicciones // [NUEVO]
-            ]
-        ]);
+                'predicciones' => $predicciones,
+            ],
+        ];
     }
 
     public function exportar(Request $request, $tipo)
     {
-        $fecha = now()->format('d/m/Y H:i');
-        
-        // Datos para el reporte (Podrías filtrar por fechas si quisieras)
-        $reservas = Reserva::with(['usuario', 'aula'])->orderBy('inicio', 'desc')->take(50)->get();
-        $activos = Activo::where('estado', '!=', 'disponible')->get();
+        if (! in_array($tipo, ['pdf', 'excel'], true)) {
+            abort(404);
+        }
 
-        if ($tipo === 'pdf') {
-            $pdf = Pdf::loadView('reports.dashboard_pdf', compact('reservas', 'activos', 'fecha'));
-            return $pdf->download('reporte_gestion_uagrm.pdf');
-        } 
-        
-        if ($tipo === 'csv') {
-            $headers = [
-                "Content-type" => "text/csv",
-                "Content-Disposition" => "attachment; filename=reporte_reservas.csv",
-                "Pragma" => "no-cache",
-                "Cache-Control" => "must-revalidate, post-check=0, pre-check=0",
-                "Expires" => "0"
-            ];
+        try {
+            $datos = $this->obtenerDatosDashboard();
+            $fechaGeneracion = now();
+            $nombreBase = 'reporte-dashboard-campusflow-' . $fechaGeneracion->format('Y-m-d');
 
-            $callback = function() use ($reservas) {
-                $file = fopen('php://output', 'w');
-                fputcsv($file, ['ID Reserva', 'Usuario', 'Aula', 'Inicio', 'Fin', 'Estado']);
+            if ($tipo === 'pdf') {
+                $pdf = Pdf::loadView('reports.dashboard_pdf', [
+                    ...$datos,
+                    'fechaGeneracion' => $fechaGeneracion,
+                ])->setPaper('a4', 'landscape');
 
-                foreach ($reservas as $reserva) {
-                    fputcsv($file, [
-                        $reserva->id,
-                        $reserva->usuario->nombre ?? 'N/A',
-                        $reserva->aula_codigo,
-                        $reserva->inicio,
-                        $reserva->fin,
-                        $reserva->estado
-                    ]);
-                }
-                fclose($file);
-            };
+                return $pdf->download($nombreBase . '.pdf');
+            }
 
-            return response()->stream($callback, 200, $headers);
+            if ($tipo === 'excel') {
+                return (new DashboardExport($datos, $fechaGeneracion))
+                    ->download($nombreBase . '.xlsx');
+            }
+        } catch (\Throwable $exception) {
+            Log::error('Error al exportar Dashboard.', [
+                'formato' => $tipo,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return response('No se pudo generar el reporte del Dashboard.', 500);
         }
     }
 }

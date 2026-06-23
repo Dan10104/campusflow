@@ -47,7 +47,7 @@ const copiarAlPortapapeles = async (texto) => {
         mostrarMensajeCopia('Informacion copiada al portapapeles.', 'success');
     } catch (err) {
         console.error('Error al copiar:', err);
-        mostrarMensajeCopia('No se pudo copiar la informacion.', 'error');
+        mostrarMensajeCopia('No se pudo copiar la información.', 'error');
     }
 };
 

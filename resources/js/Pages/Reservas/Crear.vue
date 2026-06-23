@@ -220,7 +220,7 @@ const validarAsistentes = computed(() => {
                                     <ul class="mt-3 grid gap-2 text-sm leading-6 text-slate-700 sm:grid-cols-2">
                                         <li>Debes realizar check-in al inicio de tu reserva.</li>
                                         <li>Puedes hacer check-in hasta 15 minutos antes del inicio.</li>
-                                        <li>Si no realizas check-in, tu reserva sera cancelada.</li>
+                                        <li>Si no realizas check-in, tu reserva será cancelada.</li>
                                         <li>Recuerda dejar el aula limpia y ordenada.</li>
                                     </ul>
                                 </div>

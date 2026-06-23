@@ -197,7 +197,7 @@ const aprobarReserva = () => {
         accion: "aprobar",
         url: route("admin.reservas.aprobar", reserva.value.id),
         title: "Aprobar reserva",
-        message: "La solicitud sera confirmada y el solicitante podra realizar el check-in dentro del horario permitido.",
+        message: "La solicitud será confirmada y el solicitante podrá realizar el check-in dentro del horario permitido.",
         confirmText: "Aprobar",
         variant: "primary",
     };
@@ -210,7 +210,7 @@ const rechazarReserva = () => {
         accion: "rechazar",
         url: route("admin.reservas.rechazar", reserva.value.id),
         title: "Rechazar reserva",
-        message: "La solicitud sera rechazada y dejara de bloquear el aula. El registro permanecera en el historial.",
+        message: "La solicitud será rechazada y dejará de bloquear el aula. El registro permanecerá en el historial.",
         confirmText: "Rechazar reserva",
         variant: "danger",
     };
@@ -223,7 +223,7 @@ const registrarCheckout = () => {
         accion: "checkout",
         url: route("reservas.checkout", reserva.value.id),
         title: "Registrar check-out",
-        message: "Se registrara el check-out y la reserva quedara finalizada. El historial se conservara.",
+        message: "Se registrará el check-out y la reserva quedará finalizada. El historial se conservará.",
         confirmText: "Registrar check-out",
         variant: "warning",
     };
@@ -477,7 +477,7 @@ function getOrigenTexto(origen) {
                                     </div>
                                     <div class="rounded-xl bg-slate-50 p-4">
                                         <dt class="text-xs font-black uppercase tracking-wide text-slate-500">
-                                            Codigo
+                                            Código
                                         </dt>
                                         <dd class="mt-1 text-sm font-bold text-[#0F172A]">
                                             {{ reserva.usuario?.codigo || reserva.usuario_id || "No disponible" }}

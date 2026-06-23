@@ -155,7 +155,7 @@ const confirmarCancelacion = () => {
 </script>
 
 <template>
-    <Head title="Mis Reservas" />
+    <Head title="Mis reservas" />
 
     <AuthenticatedLayout>
         <div class="min-h-screen w-full bg-[#F5F7FB] text-[#0F172A]">
@@ -164,7 +164,7 @@ const confirmarCancelacion = () => {
                     <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                         <div class="min-w-0">
                             <p class="text-xs font-bold uppercase tracking-widest text-blue-600">
-                                Gestion personal
+                                Gestión personal
                             </p>
                             <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-900">
                                 Mis reservas
@@ -426,8 +426,8 @@ const confirmarCancelacion = () => {
         <ConfirmationModal
             :show="mostrarConfirmacion"
             title="Cancelar reserva"
-            message="Esta accion cancelara la reserva y liberara el aula para otras solicitudes. El historial se conservara."
-            confirm-text="Si, cancelar reserva"
+            message="Esta acción cancelará la reserva y liberará el aula para otras solicitudes. El historial se conservará."
+            confirm-text="Sí, cancelar reserva"
             cancel-text="Volver"
             variant="danger"
             :processing="procesandoCancelacion"

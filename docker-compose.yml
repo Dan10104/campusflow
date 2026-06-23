@@ -1,0 +1,73 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: campusflow:local
+    depends_on:
+      mysql:
+        condition: service_healthy
+    ports:
+      - "${CAMPUSFLOW_PORT:-8080}:${CAMPUSFLOW_PORT:-8080}"
+    environment:
+      APP_NAME: "${CAMPUSFLOW_APP_NAME:-CampusFlow}"
+      APP_ENV: "${CAMPUSFLOW_APP_ENV:-local}"
+      APP_DEBUG: "${CAMPUSFLOW_APP_DEBUG:-true}"
+      APP_URL: "${CAMPUSFLOW_APP_URL:-http://localhost:8080}"
+      APP_KEY: "${CAMPUSFLOW_APP_KEY:-}"
+      APP_LOCALE: "${CAMPUSFLOW_APP_LOCALE:-es}"
+      APP_FALLBACK_LOCALE: "${CAMPUSFLOW_APP_FALLBACK_LOCALE:-es}"
+      APP_FAKER_LOCALE: "${CAMPUSFLOW_APP_FAKER_LOCALE:-es_BO}"
+      LOG_CHANNEL: "${CAMPUSFLOW_LOG_CHANNEL:-stderr}"
+      LOG_LEVEL: "${CAMPUSFLOW_LOG_LEVEL:-debug}"
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: "${CAMPUSFLOW_DB_DATABASE:-ProyectoFinal}"
+      DB_USERNAME: "${CAMPUSFLOW_DB_USERNAME:-campusflow}"
+      DB_PASSWORD: "${CAMPUSFLOW_DB_PASSWORD:-CAMBIAR_ESTA_CONTRASENA}"
+      SESSION_DRIVER: "${CAMPUSFLOW_SESSION_DRIVER:-database}"
+      SESSION_LIFETIME: "${CAMPUSFLOW_SESSION_LIFETIME:-120}"
+      CACHE_DRIVER: "${CAMPUSFLOW_CACHE_DRIVER:-database}"
+      CACHE_STORE: "${CAMPUSFLOW_CACHE_STORE:-database}"
+      QUEUE_CONNECTION: "${CAMPUSFLOW_QUEUE_CONNECTION:-database}"
+      BROADCAST_CONNECTION: "${CAMPUSFLOW_BROADCAST_CONNECTION:-log}"
+      FILESYSTEM_DISK: "${CAMPUSFLOW_FILESYSTEM_DISK:-local}"
+      MAIL_MAILER: "${CAMPUSFLOW_MAIL_MAILER:-log}"
+      RUN_MIGRATIONS: "${CAMPUSFLOW_RUN_MIGRATIONS:-true}"
+      DB_WAIT_TIMEOUT: "${CAMPUSFLOW_DB_WAIT_TIMEOUT:-60}"
+      PORT: "${CAMPUSFLOW_PORT:-8080}"
+      VITE_APP_NAME: "${CAMPUSFLOW_VITE_APP_NAME:-CampusFlow}"
+    volumes:
+      - app_public_storage:/var/www/html/storage/app/public
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:$${PORT:-8080}/up >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: "${CAMPUSFLOW_DB_DATABASE:-ProyectoFinal}"
+      MYSQL_USER: "${CAMPUSFLOW_DB_USERNAME:-campusflow}"
+      MYSQL_PASSWORD: "${CAMPUSFLOW_DB_PASSWORD:-CAMBIAR_ESTA_CONTRASENA}"
+      MYSQL_ROOT_PASSWORD: "${CAMPUSFLOW_MYSQL_ROOT_PASSWORD:-CAMBIAR_ROOT_PASSWORD}"
+    command:
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_unicode_ci"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$${MYSQL_PASSWORD}\" mysql -h 127.0.0.1 -u \"$${MYSQL_USER}\" \"$${MYSQL_DATABASE}\" -e 'SELECT 1' >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  app_public_storage:

@@ -293,19 +293,19 @@ const handleAppInstalled = () => {
     deferredInstallPrompt.value = null;
     markPwaInstalled();
     isPwaStandalone.value = true;
-    installMessage.value = 'CampusFlow ya estÃ¡ instalada en este dispositivo.';
+    installMessage.value = 'CampusFlow ya está instalada en este dispositivo.';
 };
 
 const promptInstallPwa = async () => {
     updateStandaloneState();
 
     if (isPwaStandalone.value) {
-        installMessage.value = 'CampusFlow ya estÃ¡ instalada en este dispositivo.';
+        installMessage.value = 'CampusFlow ya está instalada en este dispositivo.';
         return;
     }
 
     if (!deferredInstallPrompt.value) {
-        installMessage.value = 'Use el icono de instalaciÃ³n de la barra de direcciones o el menÃº del navegador -> Instalar CampusFlow.';
+        installMessage.value = 'Usa el ícono de instalación de la barra de direcciones o el menú del navegador -> Instalar CampusFlow.';
         return;
     }
 
@@ -318,12 +318,12 @@ const promptInstallPwa = async () => {
         const choice = await promptEvent.userChoice;
 
         if (choice?.outcome === 'accepted') {
-            installMessage.value = 'Finalizando la instalaciÃ³n de CampusFlow...';
+            installMessage.value = 'Finalizando la instalación de CampusFlow...';
         } else {
-            installMessage.value = 'Puedes instalar CampusFlow mÃ¡s tarde desde este botÃ³n o desde el menÃº del navegador.';
+            installMessage.value = 'Puedes instalar CampusFlow más tarde desde este botón o desde el menú del navegador.';
         }
     } catch {
-        installMessage.value = 'Use el icono de instalaciÃ³n de la barra de direcciones o el menÃº del navegador -> Instalar CampusFlow.';
+        installMessage.value = 'Usa el ícono de instalación de la barra de direcciones o el menú del navegador -> Instalar CampusFlow.';
     }
 };
 

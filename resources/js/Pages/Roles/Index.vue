@@ -66,7 +66,7 @@
     <ConfirmationModal
       :show="mostrarConfirmacion"
       title="Eliminar rol"
-      message="El rol sera eliminado permanentemente. Esta accion solo puede completarse si el rol no esta siendo utilizado por usuarios."
+      message="El rol será eliminado permanentemente. Esta acción solo puede completarse si el rol no está siendo utilizado por usuarios."
       confirm-text="Eliminar rol"
       cancel-text="Volver"
       variant="danger"

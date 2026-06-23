@@ -68,7 +68,7 @@ class LegalPolicyController extends Controller
 
         $request->session()->put('policies_accepted', true);
 
-        return redirect()->route('dashboard')->with('success', 'Aceptaste los terminos y la politica de privacidad para esta sesion.');
+        return redirect()->route('dashboard')->with('success', 'Aceptaste los términos y la política de privacidad para esta sesión.');
     }
 
     public function apiPolicies(Request $request): JsonResponse

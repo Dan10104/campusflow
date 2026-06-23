@@ -241,12 +241,12 @@ const formatDate = (dateString) => {
                                 Exportar PDF
                             </a>
                             <a
-                                :href="route('reporte.exportar', 'csv')"
+                                :href="route('reporte.exportar', 'excel')"
                                 target="_blank"
                                 class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm font-bold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-100 focus:outline-none focus:ring-4 focus:ring-emerald-500/20 focus:ring-offset-2 focus:ring-offset-[var(--cf-surface)]"
                             >
                                 <ArrowDownTrayIcon aria-hidden="true" class="h-4 w-4" />
-                                Exportar CSV
+                                Exportar Excel
                             </a>
                         </div>
                     </div>

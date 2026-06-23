@@ -44,20 +44,20 @@
             v-if="isAdmin && permiso.estado && permiso.ruta === 'admin.aprobaciones'"
             :href="route('admin.reservas.index')"
             :class="{ 'nav__body__items__active': route().current('admin.reservas.index') }"
-            title="Gestion de reservas"
+            title="Gestión de reservas"
           >
             <i class="bi bi-calendar2-week" aria-hidden="true"></i>
-            <span>Gestion de reservas</span>
+            <span>Gestión de reservas</span>
           </Link>
 
           <Link
             v-if="isAdmin && permiso.estado && permiso.ruta === 'admin.aprobaciones'"
             :href="route('prestamos.index')"
             :class="{ 'nav__body__items__active': route().current('prestamos.*') }"
-            title="Gestion de prestamos"
+            title="Gestión de préstamos"
           >
             <i class="bi bi-box-seam" aria-hidden="true"></i>
-            <span>Gestion de prestamos</span>
+            <span>Gestión de préstamos</span>
           </Link>
         </template>
 
@@ -65,20 +65,20 @@
           v-if="isAdmin && !hasApprovalCenter"
           :href="route('admin.reservas.index')"
           :class="{ 'nav__body__items__active': route().current('admin.reservas.index') }"
-          title="Gestion de reservas"
+          title="Gestión de reservas"
         >
           <i class="bi bi-calendar2-week" aria-hidden="true"></i>
-          <span>Gestion de reservas</span>
+          <span>Gestión de reservas</span>
         </Link>
 
         <Link
           v-if="isAdmin && !hasApprovalCenter"
           :href="route('prestamos.index')"
           :class="{ 'nav__body__items__active': route().current('prestamos.*') }"
-          title="Gestion de prestamos"
+          title="Gestión de préstamos"
         >
           <i class="bi bi-box-seam" aria-hidden="true"></i>
-          <span>Gestion de prestamos</span>
+          <span>Gestión de préstamos</span>
         </Link>
       </div>
     </nav>

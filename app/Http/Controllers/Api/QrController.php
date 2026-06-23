@@ -28,7 +28,7 @@ class QrController extends Controller
         if (!$aula) {
             return response()->json([
                 'success' => false,
-                'message' => 'Codigo QR no reconocido (Aula no encontrada).',
+                'message' => 'Código QR no reconocido (Aula no encontrada).',
                 'data' => null,
             ], 404);
         }
@@ -98,7 +98,7 @@ class QrController extends Controller
                 if (!$activo) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'Codigo QR no reconocido (Activo no encontrado).',
+                        'message' => 'Código QR no reconocido (Activo no encontrado).',
                         'data' => null,
                     ], 404);
                 }
@@ -145,7 +145,7 @@ class QrController extends Controller
         if ($tienePrestamoFisicoActivo) {
             return response()->json([
                 'success' => false,
-                'message' => 'El activo ya tiene un prestamo fisico activo.',
+                'message' => 'El activo ya tiene un préstamo físico activo.',
                 'data' => null,
             ], 409);
         }
@@ -193,7 +193,7 @@ class QrController extends Controller
         if (!$reserva) {
             return response()->json([
                 'success' => false,
-                'message' => 'No tienes este activo en prestamo actualmente bajo tu usuario.',
+                'message' => 'No tienes este activo en préstamo actualmente bajo tu usuario.',
                 'data' => null,
             ], 403);
         }

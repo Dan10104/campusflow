@@ -485,7 +485,7 @@ const calendarOptions = computed(() => ({
         <ConfirmationModal
             :show="Boolean(reservaParaAprobar)"
             title="Aprobar reserva"
-            :message="`La solicitud de ${reservaParaAprobar?.usuario?.nombre || 'este usuario'} sera confirmada y el aula quedara reservada en el horario indicado.`"
+            :message="`La solicitud de ${reservaParaAprobar?.usuario?.nombre || 'este usuario'} será confirmada y el aula quedará reservada en el horario indicado.`"
             confirm-text="Aprobar"
             cancel-text="Volver"
             variant="primary"

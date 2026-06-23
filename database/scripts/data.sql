@@ -17,13 +17,13 @@ INSERT INTO `roles` (`codigo`, `nombre`, `created_at`, `updated_at`) VALUES
 INSERT INTO `permisos` (`codigo`, `nombre`, `descripcion`, `estado`, `icono`, `ruta`, `created_at`, `updated_at`) VALUES
 (1, 'Inicio / Dashboard', 'Panel principal de control', 'activo', 'bi-speedometer2', 'dashboard', '2026-04-03 09:00:00', '2026-04-03 09:00:00'),
 (2, 'Usuarios', 'Gestión de usuarios del sistema', 'activo', 'bi-people-fill', 'users.index', '2026-04-03 09:00:00', '2026-04-03 09:00:00'),
-(3, 'Roles y Permisos', 'Administración de seguridad', 'activo', 'bi-shield-lock-fill', 'roles.index', '2026-04-03 09:00:00', '2026-04-03 09:00:00'),
-(4, 'Catálogo Activos', 'Catálogo general de activos', 'activo', 'bi-box-seam', 'activos.disponibles', '2026-04-03 09:00:00', '2026-04-03 09:00:00'),
-(6, 'Mis Reservas', 'Historial y estado de reservas', 'activo', 'bi-calendar-check', 'reservas.index', '2026-04-03 09:00:00', '2026-04-03 09:00:00'),
-(7, 'Mis Préstamos', 'Historial de préstamos de activos', 'activo', 'bi-clock-history', 'prestamos.index', '2026-04-03 09:00:00', '2026-04-03 09:00:00'),
+(3, 'Roles y permisos', 'Administración de seguridad', 'activo', 'bi-shield-lock-fill', 'roles.index', '2026-04-03 09:00:00', '2026-04-03 09:00:00'),
+(4, 'Catálogo de activos', 'Catálogo general de activos', 'activo', 'bi-box-seam', 'activos.disponibles', '2026-04-03 09:00:00', '2026-04-03 09:00:00'),
+(6, 'Mis reservas', 'Historial y estado de reservas', 'activo', 'bi-calendar-check', 'reservas.index', '2026-04-03 09:00:00', '2026-04-03 09:00:00'),
+(7, 'Mis préstamos', 'Historial de préstamos de activos', 'activo', 'bi-clock-history', 'prestamos.index', '2026-04-03 09:00:00', '2026-04-03 09:00:00'),
 (11, 'Monitoreo IoT', 'Dashboard de sensores en tiempo real', 'activo', 'bi-cpu', 'iot.dashboard', '2026-04-03 10:00:00', '2026-04-03 10:00:00'),
 (12, 'Centro Aprobaciones', 'Bandeja de solicitudes pendientes', 'activo', 'bi-check-circle-fill', 'admin.aprobaciones', '2026-04-03 10:00:00', '2026-04-03 10:00:00'),
-(13, 'Reservar Aula', 'Formulario para nueva reserva', 'activo', 'bi-plus-circle-dotted', 'reservas.crear', '2026-04-03 10:00:00', '2026-04-03 10:00:00');
+(13, 'Reservar aula', 'Formulario para nueva reserva', 'activo', 'bi-plus-circle-dotted', 'reservas.crear', '2026-04-03 10:00:00', '2026-04-03 10:00:00');
 
 INSERT INTO `roles_permisos` (`rol_id`, `permiso_id`, `created_at`, `updated_at`) VALUES
 (1, 1, '2026-04-03 10:00:00', '2026-04-03 10:00:00'), (1, 2, '2026-04-03 10:00:00', '2026-04-03 10:00:00'), (1, 3, '2026-04-03 10:00:00', '2026-04-03 10:00:00'), (1, 4, '2026-04-03 10:00:00', '2026-04-03 10:00:00'), (1, 6, '2026-04-03 10:00:00', '2026-04-03 10:00:00'), (1, 11, '2026-04-03 10:00:00', '2026-04-03 10:00:00'), (1, 12, '2026-04-03 10:00:00', '2026-04-03 10:00:00'), (1, 13, '2026-04-03 10:00:00', '2026-04-03 10:00:00'),

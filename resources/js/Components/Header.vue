@@ -26,7 +26,7 @@
           title="Salir"
           type="submit"
           class="app__icon-button app__icon-button--danger"
-          aria-label="Cerrar sesion"
+          aria-label="Cerrar sesión"
         >
           <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
         </button>

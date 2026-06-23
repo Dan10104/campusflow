@@ -38,7 +38,7 @@ const modalReserva = computed(() => {
     if (accionReservaPendiente.value.accion === 'aprobar') {
         return {
             title: 'Aprobar reserva',
-            message: 'La solicitud sera confirmada y el solicitante podra realizar el check-in dentro del horario permitido.',
+            message: 'La solicitud será confirmada y el solicitante podrá realizar el check-in dentro del horario permitido.',
             confirmText: 'Aprobar',
             variant: 'primary',
         };
@@ -46,7 +46,7 @@ const modalReserva = computed(() => {
 
     return {
         title: 'Rechazar reserva',
-        message: 'La solicitud sera rechazada y dejara de bloquear el aula. El registro permanecera en el historial.',
+        message: 'La solicitud será rechazada y dejará de bloquear el aula. El registro permanecerá en el historial.',
         confirmText: 'Rechazar reserva',
         variant: 'danger',
     };
@@ -63,16 +63,16 @@ const modalPrestamo = computed(() => {
 
     if (accionPrestamoPendiente.value.accion === 'aprobar') {
         return {
-            title: 'Aprobar solicitud de prestamo',
-            message: 'La solicitud sera aprobada. Esto no registra todavia la entrega fisica del activo.',
+            title: 'Aprobar solicitud de préstamo',
+            message: 'La solicitud será aprobada. Esto no registra todavía la entrega física del activo.',
             confirmText: 'Aprobar solicitud',
             variant: 'primary',
         };
     }
 
     return {
-        title: 'Rechazar solicitud de prestamo',
-        message: 'La solicitud sera rechazada, dejara de bloquear el activo cuando corresponda y permanecera en el historial.',
+        title: 'Rechazar solicitud de préstamo',
+        message: 'La solicitud será rechazada, dejará de bloquear el activo cuando corresponda y permanecerá en el historial.',
         confirmText: 'Rechazar solicitud',
         variant: 'danger',
     };

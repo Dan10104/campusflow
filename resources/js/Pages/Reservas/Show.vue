@@ -318,7 +318,7 @@ const getCheckinTexto = (tipo) => {
                             </div>
                             <dl class="grid gap-4 p-5 sm:grid-cols-2 sm:p-6">
                                 <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                                    <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Codigo</dt>
+                                    <dt class="text-xs font-semibold uppercase tracking-wide text-slate-500">Código</dt>
                                     <dd class="mt-1 text-lg font-black text-slate-900">{{ reserva.aula.codigo }}</dd>
                                 </div>
                                 <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -397,7 +397,7 @@ const getCheckinTexto = (tipo) => {
                         <section class="rounded-2xl border border-slate-200 bg-white shadow-sm">
                             <div class="border-b border-slate-200 px-5 py-5 sm:px-6">
                                 <p class="border-l-4 border-blue-600 pl-3 text-sm font-bold text-slate-900">
-                                    Codigo QR
+                                    Código QR
                                 </p>
                                 <h2 class="mt-1 text-xl font-bold text-slate-900">
                                     Validacion de reserva
@@ -524,7 +524,7 @@ const getCheckinTexto = (tipo) => {
         <ConfirmationModal
             :show="mostrarConfirmacion"
             title="Cancelar reserva"
-            message="La reserva quedara cancelada y el aula volvera a estar disponible. Esta accion no elimina el historial."
+            message="La reserva quedará cancelada y el aula volverá a estar disponible. Esta acción no elimina el historial."
             confirm-text="Cancelar reserva"
             cancel-text="Volver"
             variant="danger"

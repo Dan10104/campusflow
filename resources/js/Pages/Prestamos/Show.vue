@@ -93,7 +93,7 @@ const aprobarSolicitud = () => {
     abrirConfirmacion({
         tipo: "aprobar",
         title: "Aprobar solicitud",
-        message: "La solicitud sera aprobada. El activo continuara bloqueado para otras solicitudes, pero todavia no se registrara como entregado.",
+        message: "La solicitud será aprobada. El activo continuará bloqueado para otras solicitudes, pero todavía no se registrará como entregado.",
         confirmText: "Aprobar solicitud",
         variant: "primary",
         routeName: "prestamos.entregar",
@@ -104,7 +104,7 @@ const rechazarSolicitud = () => {
     abrirConfirmacion({
         tipo: "rechazar",
         title: "Rechazar solicitud",
-        message: "La solicitud sera rechazada y el activo podra ser solicitado nuevamente cuando no exista otro prestamo activo. El historial se conservara.",
+        message: "La solicitud será rechazada y el activo podrá ser solicitado nuevamente cuando no exista otro préstamo activo. El historial se conservará.",
         confirmText: "Rechazar solicitud",
         variant: "danger",
         routeName: "prestamos.rechazar",
@@ -115,7 +115,7 @@ const registrarEntrega = () => {
     abrirConfirmacion({
         tipo: "entregar",
         title: "Registrar entrega",
-        message: "Confirma que el activo fue entregado fisicamente al solicitante. El prestamo pasara a Entregado y el activo quedara marcado como Prestado.",
+        message: "Confirma que el activo fue entregado físicamente al solicitante. El préstamo pasará a Entregado y el activo quedará marcado como Prestado.",
         confirmText: "Registrar entrega",
         variant: "warning",
         routeName: "prestamos.entregar",
@@ -125,9 +125,9 @@ const registrarEntrega = () => {
 const registrarDevolucion = () => {
     abrirConfirmacion({
         tipo: "devolver",
-        title: "Registrar devolucion",
-        message: "Confirma que el activo fue recibido fisicamente. El prestamo finalizara y el activo volvera a estar disponible cuando no exista otro prestamo fisico activo.",
-        confirmText: "Registrar devolucion",
+        title: "Registrar devolución",
+        message: "Confirma que el activo fue recibido físicamente. El préstamo finalizará y el activo volverá a estar disponible cuando no exista otro préstamo físico activo.",
+        confirmText: "Registrar devolución",
         variant: "primary",
         routeName: "prestamos.devolver",
     });

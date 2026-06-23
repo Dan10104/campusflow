@@ -117,13 +117,13 @@ const filtrosActivos = computed(() =>
 );
 
 const pageTitle = computed(() =>
-    modoAdmin.value ? "Gestion de prestamos" : "Mis prestamos",
+    modoAdmin.value ? "Gestión de préstamos" : "Mis préstamos",
 );
 
 const pageDescription = computed(() =>
     modoAdmin.value
         ? "Consulta y supervisa todas las solicitudes, entregas y devoluciones de activos."
-        : "Consulta las solicitudes y prestamos de activos asociados a tu cuenta.",
+        : "Consulta las solicitudes y préstamos de activos asociados a tu cuenta.",
 );
 
 const datosFiltro = () =>
@@ -213,11 +213,11 @@ const getControlPrestamo = (prestamo) => {
         aprobado: "Aprobado, pendiente de entrega",
         entregado: "Activo entregado",
         devuelto: "Activo devuelto",
-        vencido: "Prestamo vencido",
+        vencido: "Préstamo vencido",
         rechazado: "Solicitud rechazada",
     };
 
-    return controles[prestamo.estado] || "Sin informacion de control";
+    return controles[prestamo.estado] || "Sin información de control";
 };
 
 const activoDescripcion = (prestamo) =>
@@ -242,7 +242,7 @@ const activoTipo = (prestamo) =>
                                 v-if="modoAdmin"
                                 class="inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-blue-700"
                             >
-                                Gestion institucional
+                                Gestión institucional
                             </span>
                             <p
                                 v-else
@@ -261,7 +261,7 @@ const activoTipo = (prestamo) =>
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
                             <span class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-2.5 text-sm font-bold text-[#334155]">
                                 <ClockIcon class="h-5 w-5 shrink-0 text-[#2563EB]" aria-hidden="true" />
-                                {{ totalPrestamos }} prestamos
+                                {{ totalPrestamos }} préstamos
                             </span>
 
                             <button
@@ -270,7 +270,7 @@ const activoTipo = (prestamo) =>
                                 @click="router.visit(route('activos.disponibles'))"
                             >
                                 <PlusIcon class="h-5 w-5" aria-hidden="true" />
-                                Nuevo prestamo
+                                Nuevo préstamo
                             </button>
                         </div>
                     </div>
@@ -408,12 +408,12 @@ const activoTipo = (prestamo) =>
 
                             <thead class="bg-slate-50 text-xs font-black uppercase tracking-wide text-slate-500">
                                 <tr>
-                                    <th class="px-4 py-3">Prestamo</th>
+                                    <th class="px-4 py-3">Préstamo</th>
                                     <th v-if="modoAdmin" class="px-4 py-3">Solicitante</th>
                                     <th class="px-4 py-3">Activo</th>
                                     <th class="px-4 py-3">Periodo</th>
                                     <th class="px-4 py-3">Estado</th>
-                                    <th class="px-4 py-3">Entrega / devolucion</th>
+                                    <th class="px-4 py-3">Entrega / devolución</th>
                                     <th class="px-4 py-3 text-center">Acciones</th>
                                 </tr>
                             </thead>
@@ -446,7 +446,7 @@ const activoTipo = (prestamo) =>
                                             {{ activoDescripcion(prestamo) }}
                                         </p>
                                         <p class="mt-1 break-all font-mono text-xs font-semibold text-[#475569]">
-                                            Codigo {{ prestamo.activo_codigo }}
+                                            Código {{ prestamo.activo_codigo }}
                                         </p>
                                         <p class="mt-1 break-words text-xs font-medium text-[#64748B]">
                                             {{ activoTipo(prestamo) }}
@@ -506,7 +506,7 @@ const activoTipo = (prestamo) =>
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
                                     <p class="text-sm font-black text-[#0F172A]">
-                                        Prestamo #{{ prestamo.id }}
+                                        Préstamo #{{ prestamo.id }}
                                     </p>
                                     <p class="mt-1 break-words text-sm font-semibold text-[#475569]">
                                         {{ activoDescripcion(prestamo) }}
@@ -539,7 +539,7 @@ const activoTipo = (prestamo) =>
                                             Activo
                                         </dt>
                                         <dd class="mt-1 break-words font-bold text-[#0F172A]">
-                                            Codigo {{ prestamo.activo_codigo }}
+                                            Código {{ prestamo.activo_codigo }}
                                         </dd>
                                         <dd class="break-words text-xs font-medium text-[#64748B]">
                                             {{ activoTipo(prestamo) }}
@@ -561,7 +561,7 @@ const activoTipo = (prestamo) =>
 
                                 <div class="rounded-xl bg-slate-50 p-3">
                                     <dt class="text-xs font-bold uppercase tracking-wide text-slate-500">
-                                        Entrega / devolucion
+                                        Entrega / devolución
                                     </dt>
                                     <dd class="mt-1 break-words font-bold text-[#0F172A]">
                                         {{ getControlPrestamo(prestamo) }}
@@ -590,10 +590,10 @@ const activoTipo = (prestamo) =>
                             <ClockIcon class="h-8 w-8" aria-hidden="true" />
                         </div>
                         <h3 class="mt-4 text-lg font-black text-[#0F172A]">
-                            No se encontraron prestamos con los filtros seleccionados.
+                            No se encontraron préstamos con los filtros seleccionados.
                         </h3>
                         <p class="mx-auto mt-2 max-w-md text-sm font-medium leading-6 text-[#475569]">
-                            Ajusta la busqueda o limpia los filtros para volver al listado disponible.
+                            Ajusta la búsqueda o limpia los filtros para volver al listado disponible.
                         </p>
                         <button
                             v-if="filtrosActivos"
@@ -610,7 +610,7 @@ const activoTipo = (prestamo) =>
                         class="flex flex-col gap-3 border-t border-[#E2E8F0] px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
                     >
                         <p class="text-sm font-medium text-[#475569]">
-                            Pagina {{ prestamos.current_page }} de {{ prestamos.last_page }}
+                            Página {{ prestamos.current_page }} de {{ prestamos.last_page }}
                         </p>
                         <div class="flex flex-wrap gap-2">
                             <button
