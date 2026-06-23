@@ -1,3 +1,132 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --cf-font-sans: Figtree, Nunito, Arial, Helvetica, sans-serif;
+  --cf-navy-950: #061324;
+  --cf-navy-900: #0B1F3A;
+  --cf-navy-850: #102A4C;
+  --cf-navy-800: #163A64;
+  --cf-blue-600: #2563eb;
+  --cf-cyan-500: #06B6D4;
+  --cf-slate-900: #0f172a;
+  --cf-slate-700: #334155;
+  --cf-slate-500: #64748b;
+  --cf-slate-300: #cbd5e1;
+  --cf-slate-200: #E2E8F0;
+  --cf-slate-100: #f1f5f9;
+  --cf-slate-50: #f8fafc;
+  --cf-white: #ffffff;
+  --cf-danger: #dc2626;
+  --cf-danger-soft: #fee2e2;
+  --cf-header-height: 4.25rem;
+  --cf-sidebar-width: 16.5rem;
+  --cf-sidebar-collapsed-width: 4.75rem;
+  --cf-radius-sm: 0.375rem;
+  --cf-radius-md: 0.5rem;
+  --cf-radius-lg: 0.75rem;
+  --cf-shadow-sm: 0 1px 2px rgb(15 23 42 / 8%);
+  --cf-shadow-md: 0 14px 30px rgb(15 23 42 / 12%);
+  --cf-focus-ring: 0 0 0 3px rgb(37 99 235 / 22%);
+  --cf-bg: #F5F7FB;
+  --cf-surface: #ffffff;
+  --cf-surface-muted: #f8fafc;
+  --cf-surface-raised: #ffffff;
+  --cf-border: #E2E8F0;
+  --cf-border-strong: #cbd5e1;
+  --cf-text: #0F172A;
+  --cf-text-muted: #64748B;
+  --cf-heading: #0F172A;
+  --cf-primary: #0B1F3A;
+  --cf-primary-strong: #0B1F3A;
+  --cf-primary-soft: #dbeafe;
+  --cf-accent: #2563eb;
+  --cf-accent-soft: #e0f2fe;
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --cf-bg: #08111f;
+  --cf-surface: #111c2e;
+  --cf-surface-muted: #0d1728;
+  --cf-surface-raised: #15233a;
+  --cf-border: #24344d;
+  --cf-border-strong: #334762;
+  --cf-text: #e5edf7;
+  --cf-text-muted: #9fb0c7;
+  --cf-heading: #f8fafc;
+  --cf-primary: #0b1f33;
+  --cf-primary-strong: #071827;
+  --cf-primary-soft: #1d3553;
+  --cf-accent: #60a5fa;
+  --cf-accent-soft: #16324f;
+  --cf-shadow-sm: 0 1px 2px rgb(0 0 0 / 22%);
+  --cf-shadow-md: 0 16px 34px rgb(0 0 0 / 34%);
+  color-scheme: dark;
+}
+
+html {
+  min-height: 100%;
+  background: var(--cf-bg);
+}
+
+body {
+  min-height: 100%;
+  margin: 0;
+  background: var(--cf-bg);
+  color: var(--cf-text);
+  font-family: var(--cf-font-sans);
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  letter-spacing: 0;
+}
+
+.campusflow-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.campusflow-logo__tile {
+  fill: var(--cf-accent);
+}
+
+.campusflow-logo__path {
+  stroke: var(--cf-white);
+}
+
+:root[data-theme='dark'] .card,
+:root[data-theme='dark'] .modal-content,
+:root[data-theme='dark'] .dropdown-menu,
+:root[data-theme='dark'] .list-group-item {
+  background-color: var(--cf-surface);
+  border-color: var(--cf-border);
+  color: var(--cf-text);
+}
+
+:root[data-theme='dark'] .form-control,
+:root[data-theme='dark'] .form-select {
+  background-color: var(--cf-surface-raised);
+  border-color: var(--cf-border);
+  color: var(--cf-text);
+}
+
+:root[data-theme='dark'] .form-control::placeholder {
+  color: var(--cf-text-muted);
+}
+
+:root[data-theme='dark'] .table {
+  --bs-table-bg: var(--cf-surface);
+  --bs-table-color: var(--cf-text);
+  --bs-table-border-color: var(--cf-border);
+  --bs-table-striped-bg: var(--cf-surface-muted);
+  --bs-table-striped-color: var(--cf-text);
+  --bs-table-hover-bg: var(--cf-primary-soft);
+  --bs-table-hover-color: var(--cf-text);
+}

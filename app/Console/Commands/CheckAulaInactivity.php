@@ -2,83 +2,85 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Command;
+use App\Models\CheckinReserva;
 use App\Models\Reserva;
 use App\Services\IoTService;
-use App\Models\CheckinReserva;
-use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 class CheckAulaInactivity extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
     protected $signature = 'aulas:check-inactivity';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
     protected $description = 'Verifica aulas en uso y las libera si no detecta movimiento por sensores IoT';
 
-    /**
-     * Execute the console command.
-     */
-    public function handle(IoTService $iotService)
+    public function handle(IoTService $iotService): int
     {
-        $this->info('Iniciando verificación de inactividad de aulas...');
-        
-        // 1. Obtener reservas actualmente "en uso"
+        $this->info('Iniciando verificacion de inactividad de aulas...');
+
         $reservasEnCurso = Reserva::where('estado', 'en_uso')->get();
 
         if ($reservasEnCurso->isEmpty()) {
             $this->info('No hay aulas en uso en este momento.');
-            return;
+
+            return self::SUCCESS;
         }
 
         $liberadas = 0;
 
         foreach ($reservasEnCurso as $reserva) {
-            // 2. Consultar Servicio IoT
-            $this->info("Verificando aula: " . $reserva->aula_codigo);
+            $this->info('Verificando aula: ' . $reserva->aula_codigo);
+
             $hayMovimiento = $iotService->detectarMovimiento($reserva->aula_codigo);
 
-            if (!$hayMovimiento) {
-                // Verificar si acaba de hacer Check-in (darle 15 mins de gracia)
-                $ultimoCheckin = $reserva->checkins()
-                    ->where('tipo', 'checkin')
-                    ->latest('registrado_en')
-                    ->first();
+            if ($hayMovimiento) {
+                continue;
+            }
 
-                if ($ultimoCheckin && Carbon::parse($ultimoCheckin->registrado_en)->diffInMinutes(now()) < 15) {
-                    $this->info("Aula {$reserva->aula_codigo} vacía, pero check-in reciente. Se mantiene.");
-                    continue;
+            $ultimoCheckin = $reserva->checkins()
+                ->where('tipo', 'checkin')
+                ->latest('registrado_en')
+                ->first();
+
+            if ($ultimoCheckin && Carbon::parse($ultimoCheckin->registrado_en)->diffInMinutes(now()) < 15) {
+                $this->info("Aula {$reserva->aula_codigo} vacia, pero con check-in reciente. Se mantiene.");
+                continue;
+            }
+
+            DB::transaction(function () use ($reserva, &$liberadas) {
+                $reservaBloqueada = Reserva::query()
+                    ->lockForUpdate()
+                    ->find($reserva->id);
+
+                if (!$reservaBloqueada || $reservaBloqueada->estado !== 'en_uso') {
+                    return;
                 }
 
-                // 3. Liberar el aula
-                $this->warn("Liberando aula {$reserva->aula_codigo} por inactividad detectada.");
-                
-                $reserva->update([
-                    'estado' => 'cancelada', 
-                    'cancelado_por' => 'SISTEMA_IOT'
+                $yaTieneCheckout = $reservaBloqueada->checkins()
+                    ->where('tipo', 'checkout')
+                    ->exists();
+
+                $reservaBloqueada->update([
+                    'estado' => 'liberada_auto',
+                    'cancelado_por' => null,
                 ]);
 
-                // Registrar evento
-                CheckinReserva::create([
-                    'reserva_id' => $reserva->id,
-                    'tipo' => 'checkout_forzado',
-                    'registrado_en' => now(),
-                    'origen' => 'sistema_iot'
-                ]);
+                if (!$yaTieneCheckout) {
+                    CheckinReserva::create([
+                        'reserva_id' => $reservaBloqueada->id,
+                        'tipo' => 'checkout',
+                        'registrado_en' => now(),
+                        'origen' => 'manual',
+                    ]);
+                }
 
                 $liberadas++;
-            }
+            });
         }
 
-        $this->info("Proceso finalizado. Aulas liberadas: $liberadas");
+        $this->info("Proceso finalizado. Aulas liberadas: {$liberadas}");
+
+        return self::SUCCESS;
     }
 }

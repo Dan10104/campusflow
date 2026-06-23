@@ -1,8 +1,8 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onUnmounted } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { CheckCircleIcon, ShieldCheckIcon, ClockIcon, DocumentDuplicateIcon } from '@heroicons/vue/24/outline';
+import { CheckCircleIcon, ClockIcon, DocumentDuplicateIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     reserva: Object,
@@ -14,18 +14,21 @@ const props = defineProps({
 
 const verificandoTx = ref(null);
 const resultadoVerificacion = ref(null);
+const mensajeCopia = ref('');
+const tipoMensajeCopia = ref('success');
+let temporizadorCopia = null;
 
 const estadoBadgeClass = computed(() => {
     const estados = {
-        'pendiente': 'bg-yellow-100 text-yellow-800',
-        'aprobada': 'bg-blue-100 text-blue-800',
-        'confirmada': 'bg-green-100 text-green-800',
-        'en_uso': 'bg-purple-100 text-purple-800',
-        'completada': 'bg-gray-100 text-gray-800',
-        'cancelada': 'bg-red-100 text-red-800',
-        'liberada_auto': 'bg-orange-100 text-orange-800',
+        'pendiente': 'border border-amber-200 bg-amber-100 text-amber-800',
+        'aprobada': 'border border-blue-200 bg-blue-100 text-blue-800',
+        'confirmada': 'border border-emerald-200 bg-emerald-100 text-emerald-800',
+        'en_uso': 'border border-blue-200 bg-blue-100 text-blue-800',
+        'completada': 'border border-slate-200 bg-slate-100 text-slate-700',
+        'cancelada': 'border border-red-200 bg-red-100 text-red-800',
+        'liberada_auto': 'border border-orange-200 bg-orange-100 text-orange-800',
     };
-    return estados[props.reserva.estado] || 'bg-gray-100 text-gray-800';
+    return estados[props.reserva.estado] || 'border border-slate-200 bg-slate-100 text-slate-700';
 });
 
 const formatFecha = (fecha) => {
@@ -41,40 +44,131 @@ const formatFecha = (fecha) => {
 const copiarAlPortapapeles = async (texto) => {
     try {
         await navigator.clipboard.writeText(texto);
-        alert('Copiado al portapapeles');
+        mostrarMensajeCopia('Informacion copiada al portapapeles.', 'success');
     } catch (err) {
         console.error('Error al copiar:', err);
+        mostrarMensajeCopia('No se pudo copiar la información.', 'error');
     }
 };
 
+const mostrarMensajeCopia = (mensaje, tipo = 'success') => {
+    mensajeCopia.value = mensaje;
+    tipoMensajeCopia.value = tipo;
+
+    if (temporizadorCopia) {
+        clearTimeout(temporizadorCopia);
+    }
+
+    temporizadorCopia = setTimeout(() => {
+        mensajeCopia.value = '';
+        temporizadorCopia = null;
+    }, 2800);
+};
+
+onUnmounted(() => {
+    if (temporizadorCopia) {
+        clearTimeout(temporizadorCopia);
+    }
+});
+
 const verificarIntegridad = async (txId) => {
+    if (txId === null || txId === undefined || (typeof txId === 'string' && txId.trim() === '')) {
+        resultadoVerificacion.value = {
+            txId,
+            valido: false,
+            mensaje: 'No existe un identificador de transacción para verificar.',
+            confirmaciones: null,
+        };
+        return;
+    }
+
     verificandoTx.value = txId;
     resultadoVerificacion.value = null;
-    
+
     try {
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        const csrfToken = csrfMeta?.getAttribute('content');
+
+        if (!csrfToken) {
+            throw new Error('No se encontró el token CSRF de la sesión.');
+        }
+
         const response = await fetch('/api/blockchain/verify', {
             method: 'POST',
             headers: {
+                'Accept': 'application/json',
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'X-CSRF-TOKEN': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest',
             },
             body: JSON.stringify({ tx_id: txId }),
         });
-        
-        const data = await response.json();
-        
+
+        const responseText = await response.text();
+        let data = null;
+
+        try {
+            data = responseText ? JSON.parse(responseText) : null;
+        } catch {
+            data = null;
+        }
+
+        if (!response.ok) {
+            const fallbackMessages = {
+                401: 'Tu sesión no está autenticada. Inicia sesión nuevamente.',
+                403: 'No tienes autorización para verificar esta transacción.',
+                419: 'La sesión expiró o el token de seguridad no es válido. Recarga la página.',
+                422: 'El identificador de transacción no es válido.',
+                500: 'El servidor no pudo completar la verificación.',
+            };
+
+            resultadoVerificacion.value = {
+                txId,
+                valido: false,
+                mensaje: data?.message
+                    || data?.error
+                    || data?.errors?.tx_id?.[0]
+                    || fallbackMessages[response.status]
+                    || `No se pudo verificar la transacción. Código HTTP: ${response.status}.`,
+                confirmaciones: null,
+            };
+            return;
+        }
+
+        if (!data) {
+            resultadoVerificacion.value = {
+                txId,
+                valido: false,
+                mensaje: 'El servidor respondió en un formato inesperado.',
+                confirmaciones: null,
+            };
+            return;
+        }
+
         if (data.success) {
             resultadoVerificacion.value = {
                 txId,
-                valido: data.data.valid,
-                mensaje: data.data.message,
-                confirmaciones: data.data.blockchain_confirmations,
+                valido: Boolean(data.data?.valid),
+                mensaje: data.data?.message || 'La verificación se completó sin mensaje del servidor.',
+                confirmaciones: data.data?.blockchain_confirmations ?? null,
             };
         } else {
-            alert('Error al verificar: ' + data.message);
+            resultadoVerificacion.value = {
+                txId,
+                valido: false,
+                mensaje: data.message || data.error || 'No se pudo verificar la transacción.',
+                confirmaciones: null,
+            };
         }
     } catch (error) {
-        alert('Error de conexión al verificar transacción');
+        resultadoVerificacion.value = {
+            txId,
+            valido: false,
+            mensaje: error instanceof Error
+                ? error.message
+                : 'No fue posible conectar con el servidor.',
+            confirmaciones: null,
+        };
     } finally {
         verificandoTx.value = null;
     }
@@ -83,7 +177,7 @@ const verificarIntegridad = async (txId) => {
 const getEventIcon = (tipo) => {
     if (tipo.includes('Creada')) return '✓';
     if (tipo.includes('Modificada')) return '✎';
-    if (tipo.includes('Cancelada')) return '✕';
+    if (tipo.includes('Cancelada')) return '×';
     if (tipo.includes('Check-in')) return '→';
     if (tipo.includes('Check-out')) return '←';
     return '•';
@@ -94,222 +188,304 @@ const getEventIcon = (tipo) => {
     <Head title="Historial Blockchain - Reserva" />
 
     <AuthenticatedLayout>
-        <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-                
-                <!-- Header -->
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <div>
-                                <h2 class="text-2xl font-bold text-gray-900">
-                                    Historial Blockchain
-                                </h2>
-                                <p class="text-sm text-gray-600 mt-1">
-                                    Trazabilidad inmutable de eventos - Reserva #{{ reserva.id }}
-                                </p>
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <ShieldCheckIcon class="w-8 h-8 text-green-600" />
-                                <span class="text-sm font-medium text-green-600">
-                                    Auditoría Verificable
-                                </span>
-                            </div>
-                        </div>
+        <div class="min-h-screen w-full bg-[#F5F7FB] text-[#0F172A]">
+            <div class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+                <section class="rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-sm sm:p-6">
+                    <div class="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+                        <div class="min-w-0">
+                            <Link
+                                :href="route('reservas.index')"
+                                class="inline-flex items-center justify-center rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm font-bold text-[#334155] shadow-sm transition hover:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2"
+                            >
+                                Volver a Reservas
+                            </Link>
 
-                        <!-- Info de la reserva -->
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 p-4 bg-gray-50 rounded-lg">
-                            <div>
-                                <p class="text-xs text-gray-500 uppercase">Espacio</p>
-                                <p class="font-semibold text-gray-900">
-                                    {{ reserva.aula.nombre }}
-                                    <span class="text-xs text-gray-500">({{ reserva.aula.tipo }})</span>
+                            <div class="mt-5 flex flex-wrap items-center gap-3">
+                                <p class="text-xs font-bold uppercase tracking-widest text-[#2563EB]">
+                                    Trazabilidad Blockchain
                                 </p>
-                            </div>
-                            <div>
-                                <p class="text-xs text-gray-500 uppercase">Usuario</p>
-                                <p class="font-semibold text-gray-900">{{ reserva.usuario }}</p>
-                            </div>
-                            <div>
-                                <p class="text-xs text-gray-500 uppercase">Estado</p>
-                                <span :class="estadoBadgeClass" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full">
+                                <span
+                                    v-if="reserva?.estado"
+                                    :class="estadoBadgeClass"
+                                    class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold"
+                                >
                                     {{ reserva.estado }}
                                 </span>
                             </div>
-                            <div class="md:col-span-2">
-                                <p class="text-xs text-gray-500 uppercase">Período</p>
-                                <p class="text-sm text-gray-900">
-                                    {{ formatFecha(reserva.inicio) }} - {{ formatFecha(reserva.fin) }}
+
+                            <h1 class="mt-2 text-3xl font-bold tracking-tight text-[#0F172A]">
+                                Historial de la reserva
+                            </h1>
+                            <p class="mt-2 max-w-3xl text-sm leading-6 text-[#475569]">
+                                Reserva
+                                <span class="font-mono font-bold text-[#334155]">#{{ reserva?.id || 'No disponible' }}</span>
+                            </p>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3">
+                                <p class="text-xs font-bold uppercase tracking-wide text-[#64748B]">
+                                    Total de eventos
+                                </p>
+                                <p class="mt-1 text-2xl font-bold text-[#0F172A]">
+                                    {{ total_eventos ?? 0 }}
                                 </p>
                             </div>
-                            <div>
-                                <p class="text-xs text-gray-500 uppercase">Propósito</p>
-                                <p class="text-sm text-gray-900">{{ reserva.proposito }}</p>
+                            <div class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-3">
+                                <p class="text-xs font-bold uppercase tracking-wide text-[#64748B]">
+                                    Eventos cargados
+                                </p>
+                                <p class="mt-1 text-2xl font-bold text-[#0F172A]">
+                                    {{ eventos?.length || 0 }}
+                                </p>
                             </div>
                         </div>
                     </div>
-                </div>
+                </section>
 
-                <!-- Alerta de error -->
-                <div v-if="error" class="bg-red-50 border-l-4 border-red-400 p-4">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                            </svg>
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm text-red-700">{{ error }}</p>
-                        </div>
+                <div v-if="error" role="alert" class="rounded-2xl border border-red-200 bg-red-50 p-4 shadow-sm">
+                    <div class="flex items-start gap-3">
+                        <svg class="mt-0.5 h-5 w-5 shrink-0 text-red-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                        </svg>
+                        <p class="text-sm font-semibold text-red-900">
+                            {{ error }}
+                        </p>
                     </div>
                 </div>
 
-                <!-- Timeline de eventos -->
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">
-                            Línea de tiempo blockchain ({{ total_eventos }} eventos)
-                        </h3>
+                <div
+                    v-if="mensajeCopia"
+                    role="status"
+                    :class="[
+                        'rounded-xl border px-4 py-3 text-sm font-semibold shadow-sm',
+                        tipoMensajeCopia === 'success'
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                            : 'border-red-200 bg-red-50 text-red-700'
+                    ]"
+                >
+                    <div class="flex items-start gap-2">
+                        <CheckCircleIcon
+                            v-if="tipoMensajeCopia === 'success'"
+                            class="mt-0.5 h-4 w-4 flex-none"
+                            aria-hidden="true"
+                        />
+                        <ExclamationTriangleIcon
+                            v-else
+                            class="mt-0.5 h-4 w-4 flex-none"
+                            aria-hidden="true"
+                        />
+                        <span>{{ mensajeCopia }}</span>
+                    </div>
+                </div>
 
-                        <div v-if="eventos.length === 0" class="text-center py-12 text-gray-500">
-                            <ClockIcon class="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                            <p>No hay eventos registrados en blockchain para esta reserva.</p>
+                <section class="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-sm">
+                    <div class="border-b border-[#E2E8F0] px-5 py-5 sm:px-6">
+                        <h2 class="text-lg font-bold text-[#0F172A]">
+                            Información de la reserva
+                        </h2>
+                        <p class="mt-1 text-sm text-[#475569]">
+                            Datos principales asociados al registro.
+                        </p>
+                    </div>
+
+                    <dl class="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 lg:grid-cols-3 sm:p-6">
+                        <div v-if="reserva?.aula?.nombre" class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                            <dt class="text-xs font-bold uppercase tracking-wide text-[#64748B]">Aula</dt>
+                            <dd class="mt-1 break-words text-sm font-semibold text-[#0F172A]">{{ reserva.aula.nombre }}</dd>
+                        </div>
+                        <div v-if="reserva?.aula?.tipo" class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                            <dt class="text-xs font-bold uppercase tracking-wide text-[#64748B]">Tipo de aula</dt>
+                            <dd class="mt-1 break-words text-sm font-semibold text-[#0F172A]">{{ reserva.aula.tipo }}</dd>
+                        </div>
+                        <div v-if="reserva?.usuario" class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                            <dt class="text-xs font-bold uppercase tracking-wide text-[#64748B]">Usuario</dt>
+                            <dd class="mt-1 break-words text-sm font-semibold text-[#0F172A]">{{ reserva.usuario }}</dd>
+                        </div>
+                        <div v-if="reserva?.inicio" class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                            <dt class="text-xs font-bold uppercase tracking-wide text-[#64748B]">Inicio</dt>
+                            <dd class="mt-1 text-sm font-semibold text-[#0F172A]">{{ formatFecha(reserva.inicio) }}</dd>
+                        </div>
+                        <div v-if="reserva?.fin" class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                            <dt class="text-xs font-bold uppercase tracking-wide text-[#64748B]">Fin</dt>
+                            <dd class="mt-1 text-sm font-semibold text-[#0F172A]">{{ formatFecha(reserva.fin) }}</dd>
+                        </div>
+                        <div v-if="reserva?.estado" class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                            <dt class="text-xs font-bold uppercase tracking-wide text-[#64748B]">Estado</dt>
+                            <dd class="mt-2">
+                                <span :class="estadoBadgeClass" class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold">
+                                    {{ reserva.estado }}
+                                </span>
+                            </dd>
+                        </div>
+                        <div v-if="reserva?.proposito" class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4 sm:col-span-2 lg:col-span-3">
+                            <dt class="text-xs font-bold uppercase tracking-wide text-[#64748B]">Propósito</dt>
+                            <dd class="mt-1 break-words text-sm font-semibold text-[#0F172A]">{{ reserva.proposito }}</dd>
+                        </div>
+                    </dl>
+                </section>
+
+                <section class="rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-sm sm:p-6">
+                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h2 class="text-lg font-bold text-[#0F172A]">
+                                Resumen Blockchain
+                            </h2>
+                            <p class="mt-1 text-sm text-[#475569]">
+                                Conteo de registros disponibles para esta reserva.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                        <div class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                            <p class="text-xs font-bold uppercase tracking-wide text-[#64748B]">Total</p>
+                            <p class="mt-1 text-xl font-bold text-[#0F172A]">{{ total_eventos ?? 0 }}</p>
+                        </div>
+                        <div class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                            <p class="text-xs font-bold uppercase tracking-wide text-[#64748B]">Eventos</p>
+                            <p class="mt-1 text-xl font-bold text-[#0F172A]">{{ eventos?.length || 0 }}</p>
+                        </div>
+                        <div
+                            v-if="Array.isArray(asientos_locales) && asientos_locales.length > 0"
+                            class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4"
+                        >
+                            <p class="text-xs font-bold uppercase tracking-wide text-[#64748B]">Asientos locales</p>
+                            <p class="mt-1 text-xl font-bold text-[#0F172A]">{{ asientos_locales.length }}</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-sm">
+                    <div class="border-b border-[#E2E8F0] px-5 py-5 sm:px-6">
+                        <h2 class="text-lg font-bold text-[#0F172A]">
+                            Línea de tiempo Blockchain
+                        </h2>
+                        <p class="mt-1 text-sm text-[#475569]">
+                            {{ total_eventos ?? 0 }} eventos registrados.
+                        </p>
+                    </div>
+
+                    <div class="p-5 sm:p-6">
+                        <div v-if="!eventos || eventos.length === 0" class="rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] p-8 text-center">
+                            <ClockIcon class="mx-auto h-10 w-10 text-[#64748B]" />
+                            <p class="mt-3 text-sm font-semibold text-[#0F172A]">
+                                No hay eventos registrados para esta reserva.
+                            </p>
                         </div>
 
-                        <div v-else class="space-y-4">
-                            <div
+                        <div v-else class="space-y-5">
+                            <article
                                 v-for="(evento, index) in eventos"
                                 :key="evento.tx_id"
-                                class="relative pl-8 pb-8 border-l-2 border-gray-200 last:border-transparent"
+                                class="relative border-l-2 border-[#E2E8F0] pl-8 last:border-transparent"
                             >
-                                <!-- Icono del evento -->
-                                <div class="absolute left-0 -translate-x-1/2 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
-                                    {{ getEventIcon(evento.tipo) }}
+                                <div class="absolute left-0 flex h-9 w-9 -translate-x-1/2 items-center justify-center rounded-full border-4 border-white bg-[#2563EB] text-sm font-bold text-white shadow-sm">
+                                    {{ getEventIcon(evento.tipo || '') }}
                                 </div>
 
-                                <!-- Contenido del evento -->
-                                <div class="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow">
-                                    <div class="flex items-start justify-between">
-                                        <div class="flex-1">
-                                            <div class="flex items-center space-x-2 mb-2">
-                                                <span class="font-semibold text-gray-900">
-                                                    {{ evento.tipo }}
-                                                </span>
-                                                <span class="text-xs text-gray-500">
-                                                    Bloque #{{ evento.bloque }}
-                                                </span>
-                                            </div>
-                                            
-                                            <p class="text-sm text-gray-600 mb-3">
+                                <div class="rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] p-4 shadow-sm">
+                                    <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                        <div class="min-w-0">
+                                            <p class="break-words text-base font-bold text-[#0F172A]">
+                                                {{ evento.tipo || 'Evento sin tipo' }}
+                                            </p>
+                                            <p v-if="evento.timestamp" class="mt-1 text-sm font-semibold text-[#475569]">
                                                 {{ formatFecha(evento.timestamp) }}
                                             </p>
+                                        </div>
 
-                                            <!-- Hash y TX ID -->
-                                            <div class="space-y-2 text-xs font-mono">
-                                                <div class="flex items-center space-x-2">
-                                                    <span class="text-gray-500">TX ID:</span>
-                                                    <code class="bg-gray-200 px-2 py-1 rounded flex-1 truncate">
-                                                        {{ evento.tx_id }}
-                                                    </code>
-                                                    <button
-                                                        @click="copiarAlPortapapeles(evento.tx_id)"
-                                                        class="text-blue-600 hover:text-blue-800"
-                                                        title="Copiar"
-                                                    >
-                                                        <DocumentDuplicateIcon class="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                                <div class="flex items-center space-x-2">
-                                                    <span class="text-gray-500">Hash:</span>
-                                                    <code class="bg-gray-200 px-2 py-1 rounded flex-1 truncate">
-                                                        {{ evento.hash }}
-                                                    </code>
-                                                    <button
-                                                        @click="copiarAlPortapapeles(evento.hash)"
-                                                        class="text-blue-600 hover:text-blue-800"
-                                                        title="Copiar"
-                                                    >
-                                                        <DocumentDuplicateIcon class="w-4 h-4" />
-                                                    </button>
-                                                </div>
+                                        <span
+                                            v-if="evento.bloque"
+                                            class="inline-flex shrink-0 items-center rounded-full border border-[#E2E8F0] bg-white px-3 py-1 text-xs font-bold text-[#334155]"
+                                        >
+                                            Bloque #{{ evento.bloque }}
+                                        </span>
+                                    </div>
+
+                                    <div class="mt-4 space-y-3">
+                                        <div v-if="evento.tx_id" class="rounded-xl border border-[#E2E8F0] bg-white p-3">
+                                            <div class="mb-2 flex items-center justify-between gap-3">
+                                                <p class="text-xs font-bold uppercase tracking-wide text-[#64748B]">Transacción</p>
+                                                <button
+                                                    type="button"
+                                                    @click="copiarAlPortapapeles(evento.tx_id)"
+                                                    class="inline-flex shrink-0 items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-bold text-[#2563EB] transition hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2"
+                                                    aria-label="Copiar transacción"
+                                                >
+                                                    <DocumentDuplicateIcon class="h-4 w-4" />
+                                                    Copiar
+                                                </button>
                                             </div>
+                                            <code class="block break-all rounded-lg border border-slate-200 bg-slate-50 p-2 font-mono text-xs text-slate-700">
+                                                {{ evento.tx_id }}
+                                            </code>
+                                        </div>
 
-                                            <!-- Botón de verificación -->
-                                            <button
-                                                @click="verificarIntegridad(evento.tx_id)"
-                                                :disabled="verificandoTx === evento.tx_id"
-                                                class="mt-3 inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                                            >
-                                                <CheckCircleIcon class="w-4 h-4 mr-1" />
-                                                {{ verificandoTx === evento.tx_id ? 'Verificando...' : 'Verificar Integridad' }}
-                                            </button>
+                                        <div v-if="evento.hash" class="rounded-xl border border-[#E2E8F0] bg-white p-3">
+                                            <div class="mb-2 flex items-center justify-between gap-3">
+                                                <p class="text-xs font-bold uppercase tracking-wide text-[#64748B]">Hash</p>
+                                                <button
+                                                    type="button"
+                                                    @click="copiarAlPortapapeles(evento.hash)"
+                                                    class="inline-flex shrink-0 items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-bold text-[#2563EB] transition hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2"
+                                                    aria-label="Copiar hash"
+                                                >
+                                                    <DocumentDuplicateIcon class="h-4 w-4" />
+                                                    Copiar
+                                                </button>
+                                            </div>
+                                            <code class="block break-all rounded-lg border border-slate-200 bg-slate-50 p-2 font-mono text-xs text-slate-700">
+                                                {{ evento.hash }}
+                                            </code>
+                                        </div>
 
-                                            <!-- Resultado de verificación -->
-                                            <div
-                                                v-if="resultadoVerificacion && resultadoVerificacion.txId === evento.tx_id"
-                                                :class="[
-                                                    'mt-3 p-3 rounded-lg border-2',
-                                                    resultadoVerificacion.valido
-                                                        ? 'bg-green-50 border-green-500'
-                                                        : 'bg-red-50 border-red-500'
-                                                ]"
-                                            >
-                                                <div class="flex items-start">
-                                                    <CheckCircleIcon
-                                                        :class="[
-                                                            'w-5 h-5 mr-2',
-                                                            resultadoVerificacion.valido ? 'text-green-600' : 'text-red-600'
-                                                        ]"
-                                                    />
-                                                    <div>
-                                                        <p :class="resultadoVerificacion.valido ? 'text-green-800' : 'text-red-800'" class="font-semibold text-sm">
-                                                            {{ resultadoVerificacion.mensaje }}
-                                                        </p>
-                                                        <p class="text-xs text-gray-600 mt-1">
-                                                            {{ resultadoVerificacion.confirmaciones }} confirmaciones en blockchain
-                                                        </p>
-                                                    </div>
-                                                </div>
+                                        <div v-if="evento.red" class="rounded-xl border border-[#E2E8F0] bg-white p-3">
+                                            <p class="text-xs font-bold uppercase tracking-wide text-[#64748B]">Red</p>
+                                            <p class="mt-1 break-words text-sm font-semibold text-[#0F172A]">{{ evento.red }}</p>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        v-if="evento.tx_id"
+                                        type="button"
+                                        @click="verificarIntegridad(evento.tx_id)"
+                                        :disabled="verificandoTx === evento.tx_id"
+                                        class="mt-4 inline-flex items-center justify-center rounded-xl border border-transparent bg-[#2563EB] px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#1D4ED8] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                    >
+                                        <CheckCircleIcon class="mr-1.5 h-4 w-4" />
+                                        {{ verificandoTx === evento.tx_id ? 'Verificando...' : 'Verificar Integridad' }}
+                                    </button>
+
+                                    <div
+                                        v-if="resultadoVerificacion && resultadoVerificacion.txId === evento.tx_id"
+                                        :class="[
+                                            'mt-4 rounded-xl border p-4',
+                                            resultadoVerificacion.valido
+                                                ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                                                : 'border-red-200 bg-red-50 text-red-900'
+                                        ]"
+                                    >
+                                        <div class="flex items-start gap-3">
+                                            <CheckCircleIcon class="mt-0.5 h-5 w-5 shrink-0" />
+                                            <div class="min-w-0">
+                                                <p class="break-words text-sm font-bold">
+                                                    {{ resultadoVerificacion.mensaje }}
+                                                </p>
+                                                <p
+                                                    v-if="resultadoVerificacion.confirmaciones !== null && resultadoVerificacion.confirmaciones !== undefined"
+                                                    class="mt-1 text-xs font-semibold text-[#475569]"
+                                                >
+                                                    {{ resultadoVerificacion.confirmaciones }} confirmaciones en blockchain
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </article>
                         </div>
                     </div>
-                </div>
-
-                <!-- Información adicional -->
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <ShieldCheckIcon class="h-5 w-5 text-blue-400" />
-                        </div>
-                        <div class="ml-3">
-                            <h3 class="text-sm font-medium text-blue-800">
-                                Sobre la auditoría blockchain
-                            </h3>
-                            <div class="mt-2 text-sm text-blue-700">
-                                <p>
-                                    Cada evento está registrado de forma inmutable en una red blockchain permisionada.
-                                    Los hashes criptográficos garantizan que ningún dato puede ser alterado sin detección.
-                                    Puede verificar la integridad de cualquier transacción en cualquier momento.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Botón volver -->
-                <div class="flex justify-end">
-                    <Link
-                        :href="route('reservas.index')"
-                        class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duration-150"
-                    >
-                        ← Volver a Reservas
-                    </Link>
-                </div>
-
+                </section>
             </div>
         </div>
     </AuthenticatedLayout>

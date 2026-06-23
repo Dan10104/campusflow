@@ -2,15 +2,14 @@
 import { useForm } from '@inertiajs/vue3';
 import { Head, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { 
-    ArrowLeftIcon, 
-    CheckIcon, // <--- CAMBIO: Usamos CheckIcon en lugar de SaveIcon
+import {
+    ArrowLeftIcon,
+    CheckIcon,
     TagIcon,
     MapPinIcon,
     QrCodeIcon
 } from '@heroicons/vue/24/outline';
 
-// ... el resto de tu código (props, form, submit) sigue igual
 const props = defineProps({
     tiposActivo: Array,
 });
@@ -22,7 +21,7 @@ const form = useForm({
     modelo: '',
     ubicacion_actual: '',
     qr_code: '',
-    estado: 'disponible', 
+    estado: 'disponible',
 });
 
 const submit = () => {
@@ -34,180 +33,249 @@ const submit = () => {
     <Head title="Nuevo Activo" />
 
     <AuthenticatedLayout>
-        <div class="py-6">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex items-center mb-4">
-                    <Link
-                        :href="route('activos.disponibles')"
-                        class="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-700"
-                    >
-                        <ArrowLeftIcon class="h-5 w-5 mr-1" />
-                        Cancelar y volver
-                    </Link>
-                </div>
+        <div class="min-h-screen w-full bg-[#F5F7FB] text-[#0F172A]">
+            <div class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+                <section class="rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-sm sm:p-6">
+                    <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                        <div class="min-w-0">
+                            <Link
+                                :href="route('activos.disponibles')"
+                                class="inline-flex items-center gap-2 rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm font-bold text-[#334155] shadow-sm transition hover:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2"
+                            >
+                                <ArrowLeftIcon class="h-5 w-5 text-[#2563EB]" aria-hidden="true" />
+                                Volver a activos
+                            </Link>
 
-                <div class="md:flex md:items-center md:justify-between">
-                    <div class="flex-1 min-w-0">
-                        <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
-                            Registrar Nuevo Activo
-                        </h2>
-                        <p class="mt-1 text-sm text-gray-500">
-                            Complete la información para dar de alta un equipo en el inventario.
-                        </p>
-                    </div>
-                    <div class="mt-4 flex md:mt-0 md:ml-4">
-                        <button
-                            @click="submit"
-                            :disabled="form.processing"
-                            class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                        >
-                            <CheckIcon class="h-5 w-5 mr-2" />
-                            Guardar Activo
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
-            <form @submit.prevent="submit" class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                
-                <div class="lg:col-span-2 space-y-6">
-                    <div class="bg-white shadow-sm rounded-lg border border-gray-200">
-                        <div class="px-6 py-5 border-b border-gray-200">
-                            <h3 class="text-lg font-medium text-gray-900 flex items-center">
-                                <TagIcon class="h-5 w-5 mr-2 text-gray-400"/>
-                                Detalles del Equipo
-                            </h3>
+                            <p class="mt-5 text-xs font-bold uppercase tracking-widest text-[#2563EB]">
+                                Nuevo recurso
+                            </p>
+                            <h1 class="mt-2 text-3xl font-bold tracking-tight text-[#0F172A]">
+                                Registrar activo
+                            </h1>
+                            <p class="mt-2 max-w-3xl text-sm leading-6 text-[#475569]">
+                                Complete la información para dar de alta un equipo en el inventario institucional.
+                            </p>
                         </div>
-                        <div class="px-6 py-5 space-y-6">
-                            
-                            <div>
-                                <label for="descripcion" class="block text-sm font-medium text-gray-700">Descripción / Nombre *</label>
-                                <div class="mt-1">
+
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                            <Link
+                                :href="route('activos.disponibles')"
+                                class="inline-flex items-center justify-center rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm font-bold text-[#334155] shadow-sm transition hover:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2"
+                            >
+                                Cancelar
+                            </Link>
+                            <button
+                                type="button"
+                                @click="submit"
+                                :disabled="form.processing"
+                                class="inline-flex items-center justify-center rounded-xl border border-transparent bg-[#2563EB] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#1D4ED8] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
+                            >
+                                <CheckIcon class="mr-2 h-5 w-5" aria-hidden="true" />
+                                {{ form.processing ? 'Guardando...' : 'Guardar activo' }}
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <form @submit.prevent="submit" class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                    <div class="space-y-6 lg:col-span-2">
+                        <section class="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-sm">
+                            <div class="border-b border-[#E2E8F0] px-5 py-5 sm:px-6">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-200 bg-[#EFF6FF] text-[#2563EB]">
+                                        <TagIcon class="h-5 w-5" aria-hidden="true" />
+                                    </div>
+                                    <div>
+                                        <h2 class="text-lg font-bold text-[#0F172A]">
+                                            Detalles del equipo
+                                        </h2>
+                                        <p class="text-sm text-[#475569]">
+                                            Datos descriptivos del activo.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="space-y-6 p-5 sm:p-6">
+                                <div>
+                                    <label for="descripcion" class="block text-sm font-bold text-[#334155]">
+                                        Descripción / Nombre *
+                                    </label>
                                     <textarea
                                         id="descripcion"
                                         v-model="form.descripcion"
                                         rows="3"
-                                        class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                        class="mt-2 block w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm font-medium text-[#0F172A] placeholder:text-[#64748B] shadow-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
                                         placeholder="Ej: Proyector Epson X41 - Laboratorio 1"
                                     />
+                                    <p v-if="form.errors.descripcion" class="mt-2 text-sm font-semibold text-red-600">{{ form.errors.descripcion }}</p>
                                 </div>
-                                <p v-if="form.errors.descripcion" class="mt-1 text-sm text-red-600">{{ form.errors.descripcion }}</p>
+
+                                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                                    <div>
+                                        <label for="tipo_activo" class="block text-sm font-bold text-[#334155]">
+                                            Tipo de activo *
+                                        </label>
+                                        <select
+                                            id="tipo_activo"
+                                            v-model="form.tipo_activo_id"
+                                            class="mt-2 block w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm font-semibold text-[#0F172A] shadow-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+                                        >
+                                            <option value="" disabled>Seleccione un tipo</option>
+                                            <option v-for="tipo in tiposActivo" :key="tipo.id" :value="tipo.id">
+                                                {{ tipo.nombre }}
+                                            </option>
+                                        </select>
+                                        <p v-if="form.errors.tipo_activo_id" class="mt-2 text-sm font-semibold text-red-600">{{ form.errors.tipo_activo_id }}</p>
+                                    </div>
+
+                                    <div>
+                                        <label for="marca" class="block text-sm font-bold text-[#334155]">
+                                            Marca
+                                        </label>
+                                        <input
+                                            type="text"
+                                            id="marca"
+                                            v-model="form.marca"
+                                            class="mt-2 block w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm font-medium text-[#0F172A] shadow-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+                                        />
+                                        <p v-if="form.errors.marca" class="mt-2 text-sm font-semibold text-red-600">{{ form.errors.marca }}</p>
+                                    </div>
+
+                                    <div>
+                                        <label for="modelo" class="block text-sm font-bold text-[#334155]">
+                                            Modelo
+                                        </label>
+                                        <input
+                                            type="text"
+                                            id="modelo"
+                                            v-model="form.modelo"
+                                            class="mt-2 block w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm font-medium text-[#0F172A] shadow-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+                                        />
+                                        <p v-if="form.errors.modelo" class="mt-2 text-sm font-semibold text-red-600">{{ form.errors.modelo }}</p>
+                                    </div>
+                                </div>
                             </div>
-
-                            <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
-                                <div>
-                                    <label for="tipo_activo" class="block text-sm font-medium text-gray-700">Tipo de Activo *</label>
-                                    <select
-                                        id="tipo_activo"
-                                        v-model="form.tipo_activo_id"
-                                        class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                                    >
-                                        <option value="" disabled>Seleccione un tipo</option>
-                                        <option v-for="tipo in tiposActivo" :key="tipo.id" :value="tipo.id">
-                                            {{ tipo.nombre }}
-                                        </option>
-                                    </select>
-                                    <p v-if="form.errors.tipo_activo_id" class="mt-1 text-sm text-red-600">{{ form.errors.tipo_activo_id }}</p>
-                                </div>
-
-                                <div>
-                                    <label for="marca" class="block text-sm font-medium text-gray-700">Marca</label>
-                                    <input
-                                        type="text"
-                                        id="marca"
-                                        v-model="form.marca"
-                                        class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                    />
-                                    <p v-if="form.errors.marca" class="mt-1 text-sm text-red-600">{{ form.errors.marca }}</p>
-                                </div>
-
-                                <div>
-                                    <label for="modelo" class="block text-sm font-medium text-gray-700">Modelo</label>
-                                    <input
-                                        type="text"
-                                        id="modelo"
-                                        v-model="form.modelo"
-                                        class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                    />
-                                    <p v-if="form.errors.modelo" class="mt-1 text-sm text-red-600">{{ form.errors.modelo }}</p>
-                                </div>
-                            </div>
-                        </div>
+                        </section>
                     </div>
-                </div>
 
-                <div class="space-y-6">
-                    
-                    <div class="bg-white shadow-sm rounded-lg border border-gray-200">
-                        <div class="px-6 py-5 border-b border-gray-200">
-                            <h3 class="text-lg font-medium text-gray-900 flex items-center">
-                                <MapPinIcon class="h-5 w-5 mr-2 text-gray-400"/>
-                                Estado y Ubicación
-                            </h3>
-                        </div>
-                        <div class="px-6 py-5 space-y-6">
-                            <div>
-                                <label for="estado" class="block text-sm font-medium text-gray-700">Estado Inicial *</label>
-                                <select
-                                    id="estado"
-                                    v-model="form.estado"
-                                    class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                                >
-                                    <option value="disponible">Disponible</option>
-                                    <option value="en_deposito">En Depósito</option>
-                                    <option value="mantenimiento">Mantenimiento</option>
-                                    <option value="baja">Dado de Baja</option>
-                                </select>
-                                <p v-if="form.errors.estado" class="mt-1 text-sm text-red-600">{{ form.errors.estado }}</p>
+                    <aside class="space-y-6">
+                        <section class="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-sm">
+                            <div class="border-b border-[#E2E8F0] px-5 py-5">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-200 bg-[#EFF6FF] text-[#2563EB]">
+                                        <MapPinIcon class="h-5 w-5" aria-hidden="true" />
+                                    </div>
+                                    <div>
+                                        <h2 class="text-lg font-bold text-[#0F172A]">
+                                            Estado y ubicación
+                                        </h2>
+                                        <p class="text-sm text-[#475569]">
+                                            Condición inicial del recurso.
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div>
-                                <label for="ubicacion" class="block text-sm font-medium text-gray-700">Ubicación Actual</label>
-                                <div class="mt-1 relative rounded-md shadow-sm">
+                            <div class="space-y-5 p-5">
+                                <div>
+                                    <label for="estado" class="block text-sm font-bold text-[#334155]">
+                                        Estado inicial *
+                                    </label>
+                                    <select
+                                        id="estado"
+                                        v-model="form.estado"
+                                        class="mt-2 block w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm font-semibold text-[#0F172A] shadow-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+                                    >
+                                        <option value="disponible">Disponible</option>
+                                        <option value="mantenimiento">En mantenimiento</option>
+                                        <option value="baja">Dado de Baja</option>
+                                    </select>
+                                    <p v-if="form.errors.estado" class="mt-2 text-sm font-semibold text-red-600">{{ form.errors.estado }}</p>
+                                </div>
+
+                                <div>
+                                    <label for="ubicacion" class="block text-sm font-bold text-[#334155]">
+                                        Ubicación actual
+                                    </label>
                                     <input
                                         type="text"
                                         id="ubicacion"
                                         v-model="form.ubicacion_actual"
-                                        class="focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                        class="mt-2 block w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm font-medium text-[#0F172A] placeholder:text-[#64748B] shadow-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
                                         placeholder="Ej: Estante 3, Nivel 2"
                                     />
+                                    <p v-if="form.errors.ubicacion_actual" class="mt-2 text-sm font-semibold text-red-600">{{ form.errors.ubicacion_actual }}</p>
                                 </div>
-                                <p v-if="form.errors.ubicacion_actual" class="mt-1 text-sm text-red-600">{{ form.errors.ubicacion_actual }}</p>
                             </div>
-                        </div>
-                    </div>
+                        </section>
 
-                    <div class="bg-white shadow-sm rounded-lg border border-gray-200">
-                        <div class="px-6 py-5 border-b border-gray-200">
-                            <h3 class="text-lg font-medium text-gray-900 flex items-center">
-                                <QrCodeIcon class="h-5 w-5 mr-2 text-gray-400"/>
-                                Identificación
-                            </h3>
-                        </div>
-                        <div class="px-6 py-5">
-                            <div>
-                                <label for="qr_code" class="block text-sm font-medium text-gray-700">Código QR / Serial</label>
-                                <div class="mt-1">
-                                    <input
-                                        type="text"
-                                        id="qr_code"
-                                        v-model="form.qr_code"
-                                        class="focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md font-mono"
-                                        placeholder="Escanee o ingrese código"
-                                    />
+                        <section class="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-sm">
+                            <div class="border-b border-[#E2E8F0] px-5 py-5">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-blue-200 bg-[#EFF6FF] text-[#2563EB]">
+                                        <QrCodeIcon class="h-5 w-5" aria-hidden="true" />
+                                    </div>
+                                    <div>
+                                        <h2 class="text-lg font-bold text-[#0F172A]">
+                                            Identificación
+                                        </h2>
+                                        <p class="text-sm text-[#475569]">
+                                            Código QR o serial del activo.
+                                        </p>
+                                    </div>
                                 </div>
-                                <p class="mt-2 text-xs text-gray-500">
+                            </div>
+
+                            <div class="space-y-3 p-5">
+                                <label for="qr_code" class="block text-sm font-bold text-[#334155]">
+                                    Código QR / Serial
+                                </label>
+                                <input
+                                    type="text"
+                                    id="qr_code"
+                                    v-model="form.qr_code"
+                                    class="block w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 font-mono text-sm font-medium text-[#0F172A] placeholder:text-[#64748B] shadow-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
+                                    placeholder="Escanee o ingrese código"
+                                />
+                                <p class="text-xs font-medium leading-5 text-[#475569]">
                                     Puede dejar este campo vacío para generarlo automáticamente más tarde.
                                 </p>
-                                <p v-if="form.errors.qr_code" class="mt-1 text-sm text-red-600">{{ form.errors.qr_code }}</p>
+                                <p v-if="form.errors.qr_code" class="text-sm font-semibold text-red-600">{{ form.errors.qr_code }}</p>
                             </div>
-                        </div>
-                    </div>
+                        </section>
 
-                </div>
-            </form>
+                        <section class="rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] p-5">
+                            <p class="text-sm font-bold text-[#0F172A]">
+                                Revisión antes de guardar
+                            </p>
+                            <p class="mt-2 text-sm leading-6 text-[#475569]">
+                                Verifica que la descripción, el tipo, el estado y la ubicación correspondan al activo físico registrado.
+                            </p>
+                            <div v-if="form.processing" class="mt-4 rounded-xl border border-blue-200 bg-[#EFF6FF] px-4 py-3 text-sm font-bold text-blue-800">
+                                Guardando activo...
+                            </div>
+                        </section>
+
+                        <div class="flex flex-col gap-3 sm:flex-row lg:flex-col">
+                            <button
+                                type="submit"
+                                :disabled="form.processing"
+                                class="inline-flex items-center justify-center rounded-xl border border-transparent bg-[#2563EB] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#1D4ED8] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
+                            >
+                                <CheckIcon class="mr-2 h-5 w-5" aria-hidden="true" />
+                                {{ form.processing ? 'Guardando...' : 'Guardar activo' }}
+                            </button>
+                            <Link
+                                :href="route('activos.disponibles')"
+                                class="inline-flex items-center justify-center rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm font-bold text-[#334155] shadow-sm transition hover:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2"
+                            >
+                                Cancelar
+                            </Link>
+                        </div>
+                    </aside>
+                </form>
+            </div>
         </div>
     </AuthenticatedLayout>
 </template>

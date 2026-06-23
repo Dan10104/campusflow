@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from "vue";
-import { Head, router } from "@inertiajs/vue3";
+import { Head, Link, router } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import {
     ArrowLeftIcon,
@@ -8,11 +8,14 @@ import {
     ClockIcon,
     UserIcon,
     CheckCircleIcon,
+    ShieldCheckIcon,
 } from "@heroicons/vue/24/outline";
 import QrcodeVue from "qrcode.vue";
 
 const props = defineProps({
     activo: Object,
+    disponible_para_prestamo: Boolean,
+    motivo_no_disponible: String,
 });
 
 const solicitarPrestamo = () => {
@@ -25,19 +28,17 @@ const volver = () => {
 
 const getEstadoBadge = (estado) => {
     const badges = {
-        disponible: "bg-green-100 text-green-800",
-        en_deposito: "bg-blue-100 text-blue-800",
-        prestado: "bg-yellow-100 text-yellow-800",
-        mantenimiento: "bg-red-100 text-red-800",
-        baja: "bg-gray-100 text-gray-800",
+        disponible: "border border-emerald-200 bg-emerald-50 text-emerald-800",
+        prestado: "border border-blue-200 bg-blue-50 text-blue-800",
+        mantenimiento: "border border-amber-200 bg-amber-50 text-amber-800",
+        baja: "border border-slate-200 bg-slate-100 text-slate-700",
     };
-    return badges[estado] || "bg-gray-100 text-gray-800";
+    return badges[estado] || "border border-slate-200 bg-slate-100 text-slate-700";
 };
 
 const getEstadoTexto = (estado) => {
     const textos = {
         disponible: "Disponible",
-        en_deposito: "En Depósito",
         prestado: "Prestado",
         mantenimiento: "Mantenimiento",
         baja: "Dado de Baja",
@@ -61,216 +62,192 @@ const formatFecha = (fecha) => {
     <Head :title="`Activo: ${activo.descripcion}`" />
 
     <AuthenticatedLayout>
-        <!-- Header -->
-        <div class="py-6">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex items-center mb-4">
-                    <button
-                        @click="volver"
-                        class="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-700"
-                    >
-                        <ArrowLeftIcon class="h-5 w-5 mr-1" />
-                        Volver a activos
-                    </button>
-                </div>
-
-                <div class="md:flex md:items-center md:justify-between">
-                    <div class="flex-1 min-w-0">
-                        <h2
-                            class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate"
-                        >
-                            {{ activo.descripcion }}
-                        </h2>
-                        <div
-                            class="mt-1 flex flex-col sm:flex-row sm:flex-wrap sm:mt-0 sm:space-x-6"
-                        >
-                            <div
-                                class="mt-2 flex items-center text-sm text-gray-500"
+        <div class="min-h-screen w-full bg-[#F5F7FB] text-[#0F172A]">
+            <div class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+                <section class="rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-sm sm:p-6">
+                    <div class="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+                        <div class="min-w-0">
+                            <button
+                                @click="volver"
+                                class="inline-flex items-center gap-2 rounded-xl border border-[#E2E8F0] bg-white px-3 py-2 text-sm font-bold text-[#334155] shadow-sm transition hover:bg-[#F8FAFC] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2"
                             >
-                                {{ activo.tipo_activo.nombre }}
+                                <ArrowLeftIcon class="h-5 w-5 text-[#2563EB]" aria-hidden="true" />
+                                Volver a activos
+                            </button>
+
+                            <div class="mt-5 flex flex-wrap items-center gap-3">
+                                <p class="text-xs font-bold uppercase tracking-widest text-[#2563EB]">
+                                    Detalle institucional
+                                </p>
+                                <span
+                                    :class="getEstadoBadge(activo.estado)"
+                                    class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold"
+                                >
+                                    {{ getEstadoTexto(activo.estado) }}
+                                </span>
                             </div>
+
+                            <h1 class="mt-2 text-3xl font-bold tracking-tight text-[#0F172A]">
+                                {{ activo.descripcion }}
+                            </h1>
+                            <p class="mt-2 flex flex-wrap items-center gap-2 text-sm font-semibold text-[#475569]">
+                                <span class="font-mono text-[#334155]">{{ activo.codigo }}</span>
+                                <span aria-hidden="true">•</span>
+                                <span>{{ activo.tipo_activo.nombre }}</span>
+                            </p>
                         </div>
-                    </div>
-                    <div class="mt-4 flex md:mt-0 md:ml-4">
+
+                        <Link
+                            v-if="$page.props.auth?.isAdmin"
+                            :href="route('blockchain.activo.history', activo.codigo)"
+                            class="inline-flex items-center justify-center rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm font-bold text-blue-700 shadow-sm transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        >
+                            <ShieldCheckIcon class="mr-2 h-5 w-5" aria-hidden="true" />
+                            Ver historial Blockchain
+                        </Link>
+
                         <button
                             @click="solicitarPrestamo"
-                            :disabled="
-                                activo.estado !== 'disponible' &&
-                                activo.estado !== 'en_deposito'
-                            "
+                            :disabled="!disponible_para_prestamo"
                             :class="[
-                                'inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white',
-                                activo.estado === 'disponible' ||
-                                activo.estado === 'en_deposito'
-                                    ? 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
-                                    : 'bg-gray-300 cursor-not-allowed',
+                                'inline-flex items-center justify-center rounded-xl border border-transparent px-4 py-3 text-sm font-bold shadow-sm transition focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2',
+                                disponible_para_prestamo
+                                    ? 'bg-[#2563EB] text-white hover:bg-[#1D4ED8]'
+                                    : 'cursor-not-allowed bg-slate-200 text-slate-500',
                             ]"
                         >
                             Solicitar préstamo
                         </button>
                     </div>
-                </div>
-            </div>
-        </div>
+                </section>
 
-        <!-- Contenido -->
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
-            <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                <!-- Columna principal -->
-                <div class="lg:col-span-2 space-y-6">
-                    <!-- Información del activo -->
-                    <div
-                        class="bg-white shadow-sm rounded-lg border border-gray-200"
-                    >
-                        <div class="px-6 py-5 border-b border-gray-200">
-                            <h3 class="text-lg font-medium text-gray-900">
-                                Información del Activo
-                            </h3>
-                        </div>
-                        <div class="px-6 py-5">
-                            <dl
-                                class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2"
-                            >
-                                <div>
-                                    <dt
-                                        class="text-sm font-medium text-gray-500"
-                                    >
+                <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                    <main class="space-y-6 lg:col-span-2">
+                        <section class="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-sm">
+                            <div class="border-b border-[#E2E8F0] px-5 py-5 sm:px-6">
+                                <h2 class="text-lg font-bold text-[#0F172A]">
+                                    Información general
+                                </h2>
+                                <p class="mt-1 text-sm text-[#475569]">
+                                    Datos registrados para identificar y ubicar el activo.
+                                </p>
+                            </div>
+
+                            <dl class="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 sm:p-6">
+                                <div class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                                    <dt class="text-xs font-bold uppercase tracking-wide text-[#64748B]">
                                         Código
                                     </dt>
-                                    <dd
-                                        class="mt-1 text-sm text-gray-900 font-mono"
-                                    >
+                                    <dd class="mt-1 break-all font-mono text-sm font-semibold text-[#0F172A]">
                                         {{ activo.codigo }}
                                     </dd>
                                 </div>
-                                <div>
-                                    <dt
-                                        class="text-sm font-medium text-gray-500"
-                                    >
+
+                                <div class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                                    <dt class="text-xs font-bold uppercase tracking-wide text-[#64748B]">
                                         Estado
                                     </dt>
-                                    <dd class="mt-1">
+                                    <dd class="mt-2">
                                         <span
-                                            :class="
-                                                getEstadoBadge(activo.estado)
-                                            "
-                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                            :class="getEstadoBadge(activo.estado)"
+                                            class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold"
                                         >
                                             {{ getEstadoTexto(activo.estado) }}
                                         </span>
                                     </dd>
                                 </div>
-                                <div v-if="activo.marca">
-                                    <dt
-                                        class="text-sm font-medium text-gray-500"
-                                    >
+
+                                <div v-if="activo.marca" class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                                    <dt class="text-xs font-bold uppercase tracking-wide text-[#64748B]">
                                         Marca
                                     </dt>
-                                    <dd class="mt-1 text-sm text-gray-900">
+                                    <dd class="mt-1 text-sm font-semibold text-[#0F172A]">
                                         {{ activo.marca }}
                                     </dd>
                                 </div>
-                                <div v-if="activo.modelo">
-                                    <dt
-                                        class="text-sm font-medium text-gray-500"
-                                    >
+
+                                <div v-if="activo.modelo" class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                                    <dt class="text-xs font-bold uppercase tracking-wide text-[#64748B]">
                                         Modelo
                                     </dt>
-                                    <dd class="mt-1 text-sm text-gray-900">
+                                    <dd class="mt-1 text-sm font-semibold text-[#0F172A]">
                                         {{ activo.modelo }}
                                     </dd>
                                 </div>
-                                <div v-if="activo.ubicacion_actual">
-                                    <dt
-                                        class="text-sm font-medium text-gray-500"
-                                    >
-                                        Ubicación Actual
+
+                                <div v-if="activo.ubicacion_actual" class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                                    <dt class="text-xs font-bold uppercase tracking-wide text-[#64748B]">
+                                        Ubicación actual
                                     </dt>
-                                    <dd class="mt-1 text-sm text-gray-900">
+                                    <dd class="mt-1 text-sm font-semibold text-[#0F172A]">
                                         {{ activo.ubicacion_actual }}
                                     </dd>
                                 </div>
-                                <div>
-                                    <dt
-                                        class="text-sm font-medium text-gray-500"
-                                    >
-                                        Tipo de Activo
+
+                                <div class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                                    <dt class="text-xs font-bold uppercase tracking-wide text-[#64748B]">
+                                        Tipo de activo
                                     </dt>
-                                    <dd class="mt-1 text-sm text-gray-900">
+                                    <dd class="mt-1 text-sm font-semibold text-[#0F172A]">
                                         {{ activo.tipo_activo.nombre }}
                                     </dd>
                                 </div>
                             </dl>
-                        </div>
-                    </div>
+                        </section>
 
-                    <!-- Historial de préstamos recientes -->
-                    <div
-                        class="bg-white shadow-sm rounded-lg border border-gray-200"
-                    >
-                        <div class="px-6 py-5 border-b border-gray-200">
-                            <h3 class="text-lg font-medium text-gray-900">
-                                Historial de Préstamos Recientes
-                            </h3>
-                        </div>
-                        <div class="px-6 py-5">
-                            <div
-                                v-if="
-                                    activo.reservas_activos &&
-                                    activo.reservas_activos.length > 0
-                                "
-                                class="flow-root"
-                            >
-                                <ul role="list" class="-mb-8">
-                                    <li
-                                        v-for="(
-                                            prestamo, idx
-                                        ) in activo.reservas_activos"
-                                        :key="prestamo.id"
-                                        class="relative pb-8"
-                                    >
-                                        <span
-                                            v-if="
-                                                idx !==
-                                                activo.reservas_activos.length -
-                                                    1
-                                            "
-                                            class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"
-                                            aria-hidden="true"
-                                        />
-                                        <div class="relative flex space-x-3">
-                                            <div>
-                                                <span
-                                                    class="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center ring-8 ring-white"
-                                                >
-                                                    <UserIcon
-                                                        class="h-5 w-5 text-white"
-                                                    />
-                                                </span>
-                                            </div>
-                                            <div
-                                                class="flex min-w-0 flex-1 justify-between space-x-4"
-                                            >
-                                                <div>
-                                                    <p
-                                                        class="text-sm text-gray-900"
-                                                    >
+                        <section class="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-sm">
+                            <div class="border-b border-[#E2E8F0] px-5 py-5 sm:px-6">
+                                <h2 class="text-lg font-bold text-[#0F172A]">
+                                    Historial de préstamos recientes
+                                </h2>
+                                <p class="mt-1 text-sm text-[#475569]">
+                                    Movimientos registrados para este activo.
+                                </p>
+                            </div>
+
+                            <div class="p-5 sm:p-6">
+                                <div
+                                    v-if="
+                                        activo.reservas_activos &&
+                                        activo.reservas_activos.length > 0
+                                    "
+                                    class="flow-root"
+                                >
+                                    <ul role="list" class="space-y-4">
+                                        <li
+                                            v-for="(
+                                                prestamo, idx
+                                            ) in activo.reservas_activos"
+                                            :key="prestamo.id"
+                                            class="relative rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] p-4"
+                                        >
+                                            <span
+                                                v-if="
+                                                    idx !==
+                                                    activo.reservas_activos.length -
+                                                        1
+                                                "
+                                                class="absolute left-8 top-12 h-full w-px bg-[#E2E8F0]"
+                                                aria-hidden="true"
+                                            />
+                                            <div class="relative flex gap-3">
+                                                <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-blue-200 bg-[#EFF6FF] text-[#2563EB]">
+                                                    <UserIcon class="h-5 w-5" aria-hidden="true" />
+                                                </div>
+                                                <div class="min-w-0 flex-1">
+                                                    <p class="text-sm font-bold text-[#0F172A]">
                                                         {{
                                                             prestamo.usuario
                                                                 .nombre
                                                         }}
-                                                        <span
-                                                            class="font-medium text-gray-500"
-                                                        >
+                                                        <span class="font-semibold text-[#475569]">
                                                             -
                                                             {{
                                                                 prestamo.estado
                                                             }}
                                                         </span>
                                                     </p>
-                                                    <p
-                                                        class="mt-0.5 text-sm text-gray-500"
-                                                    >
+                                                    <p class="mt-1 text-sm leading-6 text-[#475569]">
                                                         Del
                                                         {{
                                                             formatFecha(
@@ -286,124 +263,89 @@ const formatFecha = (fecha) => {
                                                     </p>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </li>
-                                </ul>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div v-else class="rounded-2xl border border-dashed border-[#CBD5E1] bg-[#F8FAFC] p-8 text-center">
+                                    <ClockIcon class="mx-auto h-12 w-12 text-[#64748B]" aria-hidden="true" />
+                                    <p class="mt-3 text-sm font-semibold text-[#475569]">
+                                        No hay préstamos registrados
+                                    </p>
+                                </div>
                             </div>
-                            <div v-else class="text-center py-6">
-                                <ClockIcon
-                                    class="mx-auto h-12 w-12 text-gray-400"
-                                />
-                                <p class="mt-2 text-sm text-gray-500">
-                                    No hay préstamos registrados
+                        </section>
+                    </main>
+
+                    <aside class="space-y-6">
+                        <section class="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-sm">
+                            <div class="border-b border-[#E2E8F0] px-5 py-5">
+                                <h2 class="text-lg font-bold text-[#0F172A]">
+                                    Código QR
+                                </h2>
+                                <p class="mt-1 text-sm text-[#475569]">
+                                    Identificador asociado al activo.
                                 </p>
                             </div>
-                        </div>
-                    </div>
-                </div>
+                            <div class="p-5">
+                                <div class="flex flex-col items-center">
+                                    <div class="flex min-h-60 w-full items-center justify-center rounded-2xl border border-[#E2E8F0] bg-white p-4">
+                                        <QrcodeVue
+                                            v-if="activo.qr_code"
+                                            :value="activo.qr_code"
+                                            :size="200"
+                                            level="H"
+                                        />
+                                        <div
+                                            v-else
+                                            class="text-center text-[#64748B]"
+                                        >
+                                            <QrCodeIcon class="mx-auto h-24 w-24" aria-hidden="true" />
+                                            <p class="mt-2 text-sm font-semibold">QR no disponible</p>
+                                        </div>
+                                    </div>
+                                    <p class="mt-3 break-all text-center font-mono text-xs font-semibold text-[#475569]">
+                                        {{ activo.qr_code }}
+                                    </p>
+                                </div>
+                            </div>
+                        </section>
 
-                <!-- Columna lateral -->
-                <div class="space-y-6">
-                    <!-- Código QR -->
-                    <div
-                        class="bg-white shadow-sm rounded-lg border border-gray-200"
-                    >
-                        <div class="px-6 py-5 border-b border-gray-200">
-                            <h3 class="text-lg font-medium text-gray-900">
-                                Código QR
-                            </h3>
-                        </div>
-                        <div class="px-6 py-5">
-                            <div class="flex flex-col items-center">
-                                <div
-                                    class="p-4 bg-white rounded-lg border-2 border-gray-100 flex items-center justify-center"
-                                >
-                                    <QrcodeVue
-                                        v-if="activo.qr_code"
-                                        :value="activo.qr_code"
-                                        :size="200"
-                                        level="H"
-                                    />
-                                    <div
-                                        v-else
-                                        class="text-center text-gray-400"
-                                    >
-                                        <QrCodeIcon class="h-32 w-32 mx-auto" />
-                                        <p class="text-sm">QR no disponible</p>
+                        <section class="rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-sm">
+                            <h2 class="text-sm font-bold uppercase tracking-wide text-[#334155]">
+                                Disponibilidad
+                            </h2>
+
+                            <div
+                                v-if="disponible_para_prestamo"
+                                class="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"
+                            >
+                                <div class="flex items-start">
+                                    <CheckCircleIcon class="mt-0.5 h-6 w-6 text-emerald-600" aria-hidden="true" />
+                                    <div class="ml-3">
+                                        <p class="text-sm font-bold text-emerald-800">
+                                            Disponible para préstamo
+                                        </p>
+                                        <p class="mt-1 text-sm leading-6 text-[#475569]">
+                                            Este activo está listo para ser solicitado.
+                                        </p>
                                     </div>
                                 </div>
-                                <p
-                                    class="mt-3 text-xs font-mono text-gray-500 text-center break-all"
-                                >
-                                    {{ activo.qr_code }}
-                                </p>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Estado de disponibilidad -->
-                    <div
-                        class="bg-white shadow-sm rounded-lg border border-gray-200"
-                    >
-                        <div class="px-6 py-5">
-                            <h3 class="text-sm font-medium text-gray-900 mb-4">
-                                Disponibilidad
-                            </h3>
-                            <div
-                                v-if="activo.estado === 'disponible'"
-                                class="flex items-start"
-                            >
-                                <CheckCircleIcon
-                                    class="h-6 w-6 text-green-500 mt-0.5"
-                                />
-                                <div class="ml-3">
-                                    <p
-                                        class="text-sm font-medium text-green-800"
-                                    >
-                                        Disponible para préstamo
-                                    </p>
-                                    <p class="mt-1 text-sm text-gray-600">
-                                        Este activo está listo para ser
-                                        solicitado
-                                    </p>
+                            <div v-else class="mt-4 rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+                                <div class="flex items-start">
+                                    <div class="mt-1 h-4 w-4 rounded-full bg-[#CBD5E1]" />
+                                    <div class="ml-3">
+                                        <p class="text-sm font-bold text-[#334155]">
+                                            No disponible
+                                        </p>
+                                        <p class="mt-1 text-sm leading-6 text-[#475569]">
+                                            {{ motivo_no_disponible || `Estado: ${getEstadoTexto(activo.estado)}` }}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
-                            <div
-                                v-else-if="activo.estado === 'en_deposito'"
-                                class="flex items-start"
-                            >
-                                <CheckCircleIcon
-                                    class="h-6 w-6 text-blue-500 mt-0.5"
-                                />
-                                <div class="ml-3">
-                                    <p
-                                        class="text-sm font-medium text-blue-800"
-                                    >
-                                        En depósito
-                                    </p>
-                                    <p class="mt-1 text-sm text-gray-600">
-                                        Solicita la entrega del activo
-                                    </p>
-                                </div>
-                            </div>
-                            <div v-else class="flex items-start">
-                                <div
-                                    class="h-6 w-6 rounded-full bg-gray-300 mt-0.5"
-                                />
-                                <div class="ml-3">
-                                    <p
-                                        class="text-sm font-medium text-gray-800"
-                                    >
-                                        No disponible
-                                    </p>
-                                    <p class="mt-1 text-sm text-gray-600">
-                                        Estado:
-                                        {{ getEstadoTexto(activo.estado) }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                        </section>
+                    </aside>
                 </div>
             </div>
         </div>

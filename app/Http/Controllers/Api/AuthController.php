@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\LoginRequest;
+use App\Models\AceptacionPolitica;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
@@ -36,9 +37,20 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Login exitoso',
+            'requires_policy_acceptance' => true,
             'data' => [
                 'token' => $token,
-                'user' => $user
+                'user' => $user,
+                'policies' => [
+                    'versions' => [
+                        'terms' => AceptacionPolitica::VERSION_TERMINOS,
+                        'privacy' => AceptacionPolitica::VERSION_PRIVACIDAD,
+                    ],
+                    'links' => [
+                        'terms' => route('policies.terms'),
+                        'privacy' => route('policies.privacy'),
+                    ],
+                ],
             ]
         ], 200);
     }

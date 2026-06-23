@@ -14,6 +14,8 @@ use App\Http\Controllers\AulaController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ReservaController;
 use App\Http\Controllers\PrestamoController;
+use App\Http\Controllers\AdminReservaController;
+use App\Http\Controllers\LegalPolicyController;
 
 require __DIR__.'/auth.php';
 
@@ -25,6 +27,20 @@ Route::get('/', function () {
         'phpVersion' => PHP_VERSION,
     ]);
 })->name('welcome');
+
+Route::get('/terminos-y-condiciones', [LegalPolicyController::class, 'terms'])
+    ->name('policies.terms');
+
+Route::get('/politica-de-privacidad', [LegalPolicyController::class, 'privacy'])
+    ->name('policies.privacy');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/politicas/aceptar', [LegalPolicyController::class, 'accept'])
+        ->name('policies.accept');
+
+    Route::post('/politicas/aceptar', [LegalPolicyController::class, 'store'])
+        ->name('policies.accept.store');
+});
 
 // Ruta para enviar correos de contacto
 Route::post('/contact', [App\Http\Controllers\ContactController::class, 'send'])->name('contact.send');
@@ -177,6 +193,12 @@ Route::middleware(['auth', 'verified'])
         Route::prefix('admin')->name('admin.')->group(function() {
             Route::get('/aprobaciones', [App\Http\Controllers\AdminController::class, 'index'])
                 ->name('aprobaciones');
+
+            Route::get('/reservas', [AdminReservaController::class, 'index'])
+                ->name('reservas.index');
+
+            Route::get('/reservas/{id}', [AdminReservaController::class, 'show'])
+                ->name('reservas.show');
             
             Route::post('/reservas/{id}/aprobar', [App\Http\Controllers\AdminController::class, 'aprobarReserva'])
                 ->name('reservas.aprobar');
@@ -211,6 +233,9 @@ Route::middleware(['auth', 'verified'])
             // [NUEVO] Registrar Entrega (Check-out físico)
             Route::post('/{id}/entregar', [PrestamoController::class, 'entregar'])
                 ->name('entregar');
+
+            Route::post('/{id}/rechazar', [PrestamoController::class, 'rechazar'])
+                ->name('rechazar');
 
             // [NUEVO] Registrar Devolución (Check-in físico)
             Route::post('/{id}/devolver', [PrestamoController::class, 'devolver'])

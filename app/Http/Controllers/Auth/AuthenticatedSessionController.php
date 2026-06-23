@@ -32,8 +32,9 @@ class AuthenticatedSessionController extends Controller
         $request->authenticate();
 
         $request->session()->regenerate();
+        $request->session()->put('policies_accepted', false);
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->route('policies.accept');
     }
 
     /**

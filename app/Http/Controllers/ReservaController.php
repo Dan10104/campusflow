@@ -180,15 +180,13 @@ class ReservaController extends Controller
     {
         // 1. Validar Firma Digital del QR (Seguridad CU-05)
         if (!$request->hasValidSignature()) {
-            return response()->json(['message' => 'QR Inválido o Expirado'], 403);
+            return response()->json(['message' => 'El código QR no es válido.'], 403);
         }
 
         $reserva = Reserva::findOrFail($id);
         
-        // CORRECCIÓN: Usar codigo
-        // Permitir si es el dueño O si es admin (asumiendo que admin tiene acceso a todo o verificar rol)
-        $user = $request->user();
-        if ($reserva->usuario_id !== $user->codigo && !$user->roles->contains('nombre', 'admin')) {
+        $usuario = $request->user();
+        if (!$usuario->esAdmin()) {
              return response()->json(['message' => 'No autorizado'], 403);
         }
         
@@ -201,13 +199,8 @@ class ReservaController extends Controller
         $ventanaInicio = Carbon::parse($reserva->inicio)->subMinutes(15);
         $ventanaFin = Carbon::parse($reserva->fin);
         
-        // Admin puede hacer checkin en cualquier momento si es necesario? O mantenemos restricción?
-        // Mantenemos restricción por ahora, o la relajamos para admin? 
-        // Relajamos para admin:
-        if (!$user->roles->contains('nombre', 'admin')) {
-            if ($ahora < $ventanaInicio || $ahora > $ventanaFin) {
-                return response()->json(['message' => 'Fuera de horario'], 400);
-            }
+        if ($ahora < $ventanaInicio || $ahora > $ventanaFin) {
+            return response()->json(['message' => 'La reserva no está dentro del horario permitido para check-in.'], 400);
         }
         
         // Evitar doble checkin
@@ -216,7 +209,7 @@ class ReservaController extends Controller
             ->exists();
         
         if ($tieneCheckin) {
-            return response()->json(['message' => 'Ya registrado'], 400);
+            return response()->json(['message' => 'El check-in ya fue registrado.'], 400);
         }
         
         DB::beginTransaction();
@@ -225,7 +218,7 @@ class ReservaController extends Controller
                 'reserva_id' => $id,
                 'tipo' => 'checkin',
                 'registrado_en' => now(),
-                'origen' => 'qr_scan' // Actualizado
+                'origen' => 'qr'
             ]);
             
             $reserva->update(['estado' => 'en_uso']);
@@ -233,7 +226,7 @@ class ReservaController extends Controller
             DB::commit();
             
             return response()->json([
-                'message' => 'Check-in exitoso',
+                'message' => 'Check-in registrado correctamente.',
                 'reserva' => $reserva->fresh(['checkins'])
             ]);
             
@@ -246,6 +239,148 @@ class ReservaController extends Controller
     public function escanear()
     {
         return Inertia::render('Reservas/Escanear');
+    }
+
+    public function checkout(Request $request, int $id)
+    {
+        $usuario = $request->user();
+
+        $resultado = DB::transaction(function () use ($usuario, $id) {
+            $reserva = Reserva::lockForUpdate()->findOrFail($id);
+
+            if ($reserva->usuario_id !== $usuario->codigo && !$usuario->esAdmin()) {
+                abort(403, 'No tiene autorización para registrar el check-out de esta reserva.');
+            }
+
+            $tieneCheckout = CheckinReserva::where('reserva_id', $reserva->id)
+                ->where('tipo', 'checkout')
+                ->exists();
+
+            if ($tieneCheckout) {
+                return [
+                    'success' => false,
+                    'message' => 'El check-out ya fue registrado.',
+                ];
+            }
+
+            if ($reserva->estado !== 'en_uso') {
+                return [
+                    'success' => false,
+                    'message' => 'La reserva no se encuentra en uso.',
+                ];
+            }
+
+            $tieneCheckin = CheckinReserva::where('reserva_id', $reserva->id)
+                ->where('tipo', 'checkin')
+                ->exists();
+
+            if (!$tieneCheckin) {
+                return [
+                    'success' => false,
+                    'message' => 'No se puede registrar el check-out porque la reserva no tiene un check-in previo.',
+                ];
+            }
+
+            CheckinReserva::create([
+                'reserva_id' => $reserva->id,
+                'tipo' => 'checkout',
+                'registrado_en' => now(),
+                'origen' => 'manual',
+            ]);
+
+            $reserva->update([
+                'estado' => 'completada',
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Check-out registrado correctamente.',
+            ];
+        });
+
+        if (!$resultado['success']) {
+            return back()->withErrors([
+                'checkout' => $resultado['message'],
+            ]);
+        }
+
+        return back()->with('success', $resultado['message']);
+    }
+
+    public function destroy(Request $request, int $id)
+    {
+        $usuario = $request->user();
+
+        $resultado = DB::transaction(function () use ($usuario, $id) {
+            $reserva = Reserva::query()
+                ->lockForUpdate()
+                ->findOrFail($id);
+
+            if ($reserva->usuario_id !== $usuario->codigo && !$usuario->esAdmin()) {
+                abort(403);
+            }
+
+            if ($reserva->estado === 'cancelada') {
+                return [
+                    'success' => false,
+                    'message' => 'La reserva ya fue cancelada.',
+                ];
+            }
+
+            if ($reserva->estado === 'liberada_auto') {
+                return [
+                    'success' => false,
+                    'message' => 'La reserva ya fue liberada automáticamente.',
+                ];
+            }
+
+            $tieneCheckin = CheckinReserva::where('reserva_id', $reserva->id)
+                ->where('tipo', 'checkin')
+                ->exists();
+
+            $tieneCheckout = CheckinReserva::where('reserva_id', $reserva->id)
+                ->where('tipo', 'checkout')
+                ->exists();
+
+            if ($reserva->estado === 'completada' || $tieneCheckout) {
+                return [
+                    'success' => false,
+                    'message' => 'La reserva ya fue completada y no puede cancelarse.',
+                ];
+            }
+
+            if ($reserva->estado === 'en_uso' || $tieneCheckin) {
+                return [
+                    'success' => false,
+                    'message' => 'La reserva ya se encuentra en uso y no puede cancelarse.',
+                ];
+            }
+
+            if (!in_array($reserva->estado, ['pendiente', 'confirmada', 'aprobada'], true)) {
+                return [
+                    'success' => false,
+                    'message' => 'El estado actual de la reserva no permite cancelación.',
+                ];
+            }
+
+            $reserva->update([
+                'estado' => 'cancelada',
+                'cancelado_por' => $usuario->codigo,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Reserva cancelada correctamente.',
+            ];
+        });
+
+        if (!$resultado['success']) {
+            return back()->withErrors([
+                'reserva' => $resultado['message'],
+            ]);
+        }
+
+        return back()->with('success', $resultado['message']);
     }
     
     // ... (checkout, destroy)

@@ -50,6 +50,11 @@ class HandleInertiaRequests extends Middleware
                         ->toArray()
                     : [],
             ],
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'warning' => fn () => $request->session()->get('warning'),
+                'error' => fn () => $request->session()->get('error'),
+            ],
         ]);
     }
 

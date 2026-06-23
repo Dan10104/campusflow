@@ -4,6 +4,13 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        <meta name="theme-color" content="#0B1F3A">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-title" content="CampusFlow">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <link rel="manifest" href="/manifest.webmanifest">
+        <link rel="apple-touch-icon" href="/icons/campusflow-icon-192.png">
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
@@ -14,14 +21,7 @@
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <!-- Scripts -->
         @routes
-        @vite(['resources/sass/app.scss', 'resources/js/app.js'])
-        @vite([
-            "resources/sass/sidenav.scss",
-            "resources/sass/app-body.scss",
-            "resources/sass/nino-theme.scss",
-            "resources/sass/adult-theme.scss",
-            "resources/sass/buttons.scss"
-        ])
+        @vite(['resources/js/app.js'])
         @inertiaHead
     </head>
     <body>

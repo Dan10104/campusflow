@@ -26,7 +26,8 @@ Thumbs.db
 yarn-error.log
 
 /storage/*.json
-
 *_Zone.Identifier
-
-/storage/*.json
+CAPITULO9_RECOLECCION_*/
+database/scripts/*_backup_antes_fechas.sql
+.env.docker
+/backups/
