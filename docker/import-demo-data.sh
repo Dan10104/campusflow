@@ -20,6 +20,16 @@ DB_PORT="${DB_PORT:-3306}"
 DB_DATABASE="${DB_DATABASE:-ProyectoFinal}"
 DB_USERNAME="${DB_USERNAME:-campusflow}"
 DB_PASSWORD="${DB_PASSWORD:-}"
+DB_SOCKET="${DB_SOCKET:-}"
+
+MYSQL_CONNECTION_ARGS=()
+MYSQL_CONNECTION_ARGS+=(--default-character-set=utf8mb4)
+
+if [ -n "${DB_SOCKET}" ]; then
+    MYSQL_CONNECTION_ARGS+=(--socket="${DB_SOCKET}")
+else
+    MYSQL_CONNECTION_ARGS+=(-h "${DB_HOST}" -P "${DB_PORT}")
+fi
 
 TABLES=(
     facultades
@@ -48,8 +58,7 @@ non_empty_tables=()
 for table in "${TABLES[@]}"; do
     count="$(
         MYSQL_PWD="${DB_PASSWORD}" mysql \
-            -h "${DB_HOST}" \
-            -P "${DB_PORT}" \
+            "${MYSQL_CONNECTION_ARGS[@]}" \
             -u "${DB_USERNAME}" \
             --batch \
             --skip-column-names \
@@ -84,8 +93,7 @@ if [ "${confirmation}" != "IMPORTAR" ]; then
 fi
 
 MYSQL_PWD="${DB_PASSWORD}" mysql \
-    -h "${DB_HOST}" \
-    -P "${DB_PORT}" \
+    "${MYSQL_CONNECTION_ARGS[@]}" \
     -u "${DB_USERNAME}" \
     "${DB_DATABASE}" < "${SQL_FILE}"
 
