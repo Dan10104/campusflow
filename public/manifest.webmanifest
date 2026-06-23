@@ -1,0 +1,31 @@
+{
+    "name": "CampusFlow",
+    "short_name": "CampusFlow",
+    "description": "Gestión inteligente de espacios académicos y activos institucionales",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "any",
+    "lang": "es",
+    "theme_color": "#0B1F3A",
+    "background_color": "#F5F7FB",
+    "categories": ["education", "productivity"],
+    "icons": [
+        {
+            "src": "/icons/campusflow-icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/icons/campusflow-icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "/icons/campusflow-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

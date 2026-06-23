@@ -19,8 +19,7 @@
     <div class="app__header__right">
       <DarkModeSelector />
 
-      <form :action="route('logout')" method="POST" class="app__logout-form">
-        <input type="hidden" name="_token" :value="csrf" />
+      <form class="app__logout-form" @submit.prevent="logout">
         <button
           data-bs-toggle="tooltip"
           data-bs-placement="left"
@@ -38,13 +37,13 @@
 
 <script setup>
 import { inject } from 'vue';
-import { usePage } from '@inertiajs/vue3';
+import { router } from '@inertiajs/vue3';
 import FuncionalidadSearch from '@/Components/FuncionalidadSearch.vue';
 import DarkModeSelector from '@/Components/DarkModeSelector.vue';
 
-const { props } = usePage();
-const metaTag = document.querySelector('meta[name="csrf-token"]');
-const csrf = props.csrf || (metaTag ? metaTag.getAttribute('content') : '');
-
 const toggleSidebar = inject('toggleSidebar', () => {});
+
+const logout = () => {
+  router.post(route('logout'));
+};
 </script>

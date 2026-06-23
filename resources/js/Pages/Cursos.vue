@@ -1,6 +1,6 @@
 <script setup>
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { nextTick, ref } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import {
     AcademicCapIcon,
     ArrowPathIcon,
@@ -31,6 +31,10 @@ import {
 
 const currentYear = new Date().getFullYear();
 const isMobileMenuOpen = ref(false);
+const deferredInstallPrompt = ref(null);
+const isPwaStandalone = ref(false);
+const installMessage = ref('');
+const pwaInstalledStorageKey = 'campusflow:pwa-installed';
 
 const navigationItems = [
     { label: 'Inicio', href: '#inicio' },
@@ -256,6 +260,96 @@ const sendMessage = () => {
 const closeMobileMenu = () => {
     isMobileMenuOpen.value = false;
 };
+
+const hasStoredInstallMarker = () => {
+    try {
+        return window.localStorage.getItem(pwaInstalledStorageKey) === 'true';
+    } catch {
+        return false;
+    }
+};
+
+const markPwaInstalled = () => {
+    try {
+        window.localStorage.setItem(pwaInstalledStorageKey, 'true');
+    } catch {
+        // Browsers can block storage in private contexts; the standalone check still works.
+    }
+};
+
+const updateStandaloneState = () => {
+    isPwaStandalone.value = window.matchMedia('(display-mode: standalone)').matches
+        || window.navigator.standalone === true
+        || hasStoredInstallMarker();
+};
+
+const handleBeforeInstallPrompt = (event) => {
+    event.preventDefault();
+    deferredInstallPrompt.value = event;
+    installMessage.value = '';
+};
+
+const handleAppInstalled = () => {
+    deferredInstallPrompt.value = null;
+    markPwaInstalled();
+    isPwaStandalone.value = true;
+    installMessage.value = 'CampusFlow ya estÃ¡ instalada en este dispositivo.';
+};
+
+const promptInstallPwa = async () => {
+    updateStandaloneState();
+
+    if (isPwaStandalone.value) {
+        installMessage.value = 'CampusFlow ya estÃ¡ instalada en este dispositivo.';
+        return;
+    }
+
+    if (!deferredInstallPrompt.value) {
+        installMessage.value = 'Use el icono de instalaciÃ³n de la barra de direcciones o el menÃº del navegador -> Instalar CampusFlow.';
+        return;
+    }
+
+    const promptEvent = deferredInstallPrompt.value;
+    deferredInstallPrompt.value = null;
+
+    promptEvent.prompt();
+
+    try {
+        const choice = await promptEvent.userChoice;
+
+        if (choice?.outcome === 'accepted') {
+            installMessage.value = 'Finalizando la instalaciÃ³n de CampusFlow...';
+        } else {
+            installMessage.value = 'Puedes instalar CampusFlow mÃ¡s tarde desde este botÃ³n o desde el menÃº del navegador.';
+        }
+    } catch {
+        installMessage.value = 'Use el icono de instalaciÃ³n de la barra de direcciones o el menÃº del navegador -> Instalar CampusFlow.';
+    }
+};
+
+let standaloneMediaQuery;
+
+onMounted(() => {
+    updateStandaloneState();
+    standaloneMediaQuery = window.matchMedia('(display-mode: standalone)');
+    if (standaloneMediaQuery.addEventListener) {
+        standaloneMediaQuery.addEventListener('change', updateStandaloneState);
+    } else {
+        standaloneMediaQuery.addListener?.(updateStandaloneState);
+    }
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+});
+
+onBeforeUnmount(() => {
+    if (standaloneMediaQuery?.removeEventListener) {
+        standaloneMediaQuery.removeEventListener('change', updateStandaloneState);
+    } else {
+        standaloneMediaQuery?.removeListener?.(updateStandaloneState);
+    }
+    window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.removeEventListener('appinstalled', handleAppInstalled);
+});
 </script>
 
 <template>
@@ -289,6 +383,19 @@ const closeMobileMenu = () => {
                 </div>
 
                 <div class="hidden items-center gap-3 lg:flex">
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-2 rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-4 py-2.5 text-sm font-bold text-[#2563EB] shadow-sm transition hover:border-[#2563EB] hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#2563EB]"
+                        @click="promptInstallPwa"
+                    >
+                        <span>Instalar CampusFlow</span>
+                        <span
+                            v-if="isPwaStandalone"
+                            class="rounded-full bg-emerald-100 px-2 py-0.5 text-[0.65rem] font-black uppercase tracking-wide text-emerald-700"
+                        >
+                            Instalada
+                        </span>
+                    </button>
                     <Link
                         :href="route('login')"
                         class="rounded-lg bg-[#0B1F3A] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#12345F] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#2563EB]"
@@ -325,6 +432,19 @@ const closeMobileMenu = () => {
                     >
                         {{ item.label }}
                     </a>
+                    <button
+                        type="button"
+                        class="mt-2 inline-flex items-center justify-center gap-2 rounded-lg border border-[#BFDBFE] bg-[#EFF6FF] px-4 py-3 text-center text-sm font-bold text-[#2563EB] transition hover:border-[#2563EB] hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
+                        @click="promptInstallPwa"
+                    >
+                        <span>Instalar CampusFlow</span>
+                        <span
+                            v-if="isPwaStandalone"
+                            class="rounded-full bg-emerald-100 px-2 py-0.5 text-[0.65rem] font-black uppercase tracking-wide text-emerald-700"
+                        >
+                            Instalada
+                        </span>
+                    </button>
                     <Link
                         :href="route('login')"
                         class="mt-2 rounded-lg bg-[#0B1F3A] px-4 py-3 text-center text-sm font-bold text-white transition hover:bg-[#12345F] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
@@ -333,6 +453,21 @@ const closeMobileMenu = () => {
                         Ingresar al sistema
                     </Link>
                 </div>
+            </div>
+
+            <div
+                v-if="installMessage"
+                role="status"
+                class="fixed inset-x-4 bottom-4 z-[60] mx-auto flex max-w-xl items-center justify-between gap-4 rounded-2xl border border-[#BFDBFE] bg-white p-4 text-sm font-bold text-[#334155] shadow-2xl shadow-slate-900/15"
+            >
+                <span>{{ installMessage }}</span>
+                <button
+                    type="button"
+                    class="rounded-lg border border-[#E2E8F0] px-3 py-2 text-xs font-black text-[#2563EB] transition hover:border-[#2563EB] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
+                    @click="installMessage = ''"
+                >
+                    Cerrar
+                </button>
             </div>
         </header>
 
