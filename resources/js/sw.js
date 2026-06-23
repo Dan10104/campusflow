@@ -7,6 +7,8 @@ import { CacheFirst } from 'workbox-strategies';
 
 const privatePathPrefixes = [
     '/api',
+    '/api/blockchain',
+    '/blockchain',
     '/login',
     '/logout',
     '/register',

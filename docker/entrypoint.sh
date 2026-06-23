@@ -43,18 +43,26 @@ wait_for_mysql() {
     local timeout="${DB_WAIT_TIMEOUT:-60}"
     local elapsed=0
 
-    echo "Esperando MySQL en ${DB_HOST:-mysql}:${DB_PORT:-3306} por hasta ${timeout}s..."
+    if [ -n "${DB_SOCKET:-}" ]; then
+        echo "Esperando MySQL mediante socket ${DB_SOCKET} por hasta ${timeout}s..."
+    else
+        echo "Esperando MySQL en ${DB_HOST:-mysql}:${DB_PORT:-3306} por hasta ${timeout}s..."
+    fi
 
     until php -r '
         $host = getenv("DB_HOST") ?: "mysql";
         $port = getenv("DB_PORT") ?: "3306";
+        $socket = getenv("DB_SOCKET") ?: "";
         $db = getenv("DB_DATABASE") ?: "ProyectoFinal";
         $user = getenv("DB_USERNAME") ?: "campusflow";
         $pass = getenv("DB_PASSWORD") ?: "";
+        $dsn = $socket !== ""
+            ? "mysql:unix_socket={$socket};dbname={$db};charset=utf8mb4"
+            : "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4";
 
         try {
             new PDO(
-                "mysql:host={$host};port={$port};dbname={$db};charset=utf8mb4",
+                $dsn,
                 $user,
                 $pass,
                 [PDO::ATTR_TIMEOUT => 2]

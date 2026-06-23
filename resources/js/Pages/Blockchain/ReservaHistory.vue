@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onUnmounted } from 'vue';
+import axios from 'axios';
 import { Head, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { CheckCircleIcon, ClockIcon, DocumentDuplicateIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outline';
@@ -44,7 +45,7 @@ const formatFecha = (fecha) => {
 const copiarAlPortapapeles = async (texto) => {
     try {
         await navigator.clipboard.writeText(texto);
-        mostrarMensajeCopia('Informacion copiada al portapapeles.', 'success');
+        mostrarMensajeCopia('Información copiada al portapapeles.', 'success');
     } catch (err) {
         console.error('Error al copiar:', err);
         mostrarMensajeCopia('No se pudo copiar la información.', 'error');
@@ -86,55 +87,15 @@ const verificarIntegridad = async (txId) => {
     resultadoVerificacion.value = null;
 
     try {
-        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-        const csrfToken = csrfMeta?.getAttribute('content');
-
-        if (!csrfToken) {
-            throw new Error('No se encontró el token CSRF de la sesión.');
-        }
-
-        const response = await fetch('/api/blockchain/verify', {
-            method: 'POST',
+        const response = await axios.post(route('blockchain.verify'), {
+            tx_id: txId,
+        }, {
             headers: {
                 'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'X-Requested-With': 'XMLHttpRequest',
             },
-            body: JSON.stringify({ tx_id: txId }),
         });
 
-        const responseText = await response.text();
-        let data = null;
-
-        try {
-            data = responseText ? JSON.parse(responseText) : null;
-        } catch {
-            data = null;
-        }
-
-        if (!response.ok) {
-            const fallbackMessages = {
-                401: 'Tu sesión no está autenticada. Inicia sesión nuevamente.',
-                403: 'No tienes autorización para verificar esta transacción.',
-                419: 'La sesión expiró o el token de seguridad no es válido. Recarga la página.',
-                422: 'El identificador de transacción no es válido.',
-                500: 'El servidor no pudo completar la verificación.',
-            };
-
-            resultadoVerificacion.value = {
-                txId,
-                valido: false,
-                mensaje: data?.message
-                    || data?.error
-                    || data?.errors?.tx_id?.[0]
-                    || fallbackMessages[response.status]
-                    || `No se pudo verificar la transacción. Código HTTP: ${response.status}.`,
-                confirmaciones: null,
-            };
-            return;
-        }
-
+        const data = response.data;
         if (!data) {
             resultadoVerificacion.value = {
                 txId,
@@ -161,26 +122,39 @@ const verificarIntegridad = async (txId) => {
             };
         }
     } catch (error) {
+        const status = error?.response?.status;
+        const data = error?.response?.data;
+        const fallbackMessages = {
+            401: 'Tu sesión no está autenticada. Inicia sesión nuevamente.',
+            403: 'No tienes autorización para verificar esta transacción.',
+            419: 'La sesión de seguridad fue actualizada. Recarga la página e inténtalo nuevamente.',
+            422: 'El identificador de transacción no es válido.',
+            500: 'El servidor no pudo completar la verificación.',
+        };
+        const fallbackMessage = status
+            ? fallbackMessages[status] || `No se pudo verificar la transacción. Código HTTP: ${status}.`
+            : 'No fue posible conectar con el servidor.';
+
         resultadoVerificacion.value = {
             txId,
             valido: false,
-            mensaje: error instanceof Error
-                ? error.message
-                : 'No fue posible conectar con el servidor.',
+            mensaje: data?.errors?.tx_id?.[0]
+                || data?.message
+                || data?.error
+                || fallbackMessage,
             confirmaciones: null,
         };
     } finally {
         verificandoTx.value = null;
     }
 };
-
 const getEventIcon = (tipo) => {
-    if (tipo.includes('Creada')) return '✓';
-    if (tipo.includes('Modificada')) return '✎';
-    if (tipo.includes('Cancelada')) return '×';
-    if (tipo.includes('Check-in')) return '→';
-    if (tipo.includes('Check-out')) return '←';
-    return '•';
+    if (tipo.includes('Creada')) return '+';
+    if (tipo.includes('Modificada')) return '~';
+    if (tipo.includes('Cancelada')) return 'x';
+    if (tipo.includes('Check-in')) return '>';
+    if (tipo.includes('Check-out')) return '<';
+    return '*';
 };
 </script>
 

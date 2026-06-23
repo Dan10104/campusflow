@@ -7,6 +7,7 @@ use App\Models\Activo;
 use App\Models\AsientoBlockchain;
 use App\Services\BlockchainService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -121,26 +122,29 @@ class BlockchainController extends Controller
      */
     public function verificarTransaccion(Request $request)
     {
-        $request->validate([
-            'tx_id' => 'required|string',
+        $validated = $request->validate([
+            'tx_id' => ['required', 'string', 'max:255'],
         ]);
-        
+
         try {
-            $resultado = $this->blockchainService->verificarTransaccion($request->tx_id);
-            
+            $resultado = $this->blockchainService->verificarTransaccion($validated['tx_id']);
+
             return response()->json([
                 'success' => true,
                 'data' => $resultado,
             ]);
-            
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            Log::warning('Error verificando transacción blockchain.', [
+                'tx_id' => $validated['tx_id'],
+                'message' => $e->getMessage(),
+            ]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Error verificando transacción: ' . $e->getMessage(),
+                'message' => 'Error verificando transacción.',
             ], 400);
         }
     }
-    
     /**
      * Traduce tipos de eventos a español
      */

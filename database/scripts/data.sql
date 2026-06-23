@@ -1,3 +1,5 @@
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 INSERT INTO `facultades` (`codigo`, `nombre`, `sigla`, `created_at`, `updated_at`) VALUES
 (1, 'Facultad de Ingeniería en Ciencias de la Computación y Telecomunicaciones', 'FICCT', '2026-04-01 09:00:00', '2026-04-01 09:00:00'),
 (2, 'Facultad de Ciencias Económicas y Empresariales', 'FCEE', '2026-04-01 09:00:00', '2026-04-01 09:00:00'),
