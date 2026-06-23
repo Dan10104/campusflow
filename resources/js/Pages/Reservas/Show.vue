@@ -1,6 +1,8 @@
 <script setup>
-import { Head, router } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import ConfirmationModal from '@/Components/ConfirmationModal.vue';
 import {
     ArrowLeftIcon,
     QrCodeIcon,
@@ -9,6 +11,8 @@ import {
     UserIcon,
     CalendarIcon,
     CheckCircleIcon,
+    ExclamationTriangleIcon,
+    ShieldCheckIcon,
     XCircleIcon
 } from '@heroicons/vue/24/outline';
 import QrcodeVue from 'qrcode.vue';
@@ -16,6 +20,16 @@ import QrcodeVue from 'qrcode.vue';
 const props = defineProps({
     reserva: Object,
 });
+
+const page = usePage();
+const mostrarConfirmacion = ref(false);
+const procesandoCancelacion = ref(false);
+
+const successMessage = computed(() => page.props.flash?.success || null);
+const warningMessage = computed(() => page.props.flash?.warning || null);
+const errorMessages = computed(() =>
+    Object.values(page.props.errors || {}).filter((message) => Boolean(message)),
+);
 
 const volver = () => {
     router.visit(route('reservas.index'));
@@ -88,10 +102,8 @@ const tieneCheckin = () => {
     return props.reserva.checkins && props.reserva.checkins.some(c => c.tipo === 'checkin');
 };
 
-const hacerCheckin = () => {
-    router.post(route('reservas.checkin', props.reserva.id), {}, {
-        preserveScroll: true
-    });
+const puedeCancelar = () => {
+    return ['pendiente', 'confirmada', 'aprobada'].includes(props.reserva.estado);
 };
 
 const hacerCheckout = () => {
@@ -101,9 +113,32 @@ const hacerCheckout = () => {
 };
 
 const cancelarReserva = () => {
-    if (confirm('Estas seguro de que deseas cancelar esta reserva?')) {
-        router.delete(route('reservas.destroy', props.reserva.id));
-    }
+    if (procesandoCancelacion.value) return;
+
+    mostrarConfirmacion.value = true;
+};
+
+const cerrarConfirmacion = () => {
+    if (procesandoCancelacion.value) return;
+
+    mostrarConfirmacion.value = false;
+};
+
+const confirmarCancelacion = () => {
+    if (procesandoCancelacion.value) return;
+
+    router.delete(route('reservas.destroy', props.reserva.id), {
+        preserveScroll: true,
+        onStart: () => {
+            procesandoCancelacion.value = true;
+        },
+        onSuccess: () => {
+            mostrarConfirmacion.value = false;
+        },
+        onFinish: () => {
+            procesandoCancelacion.value = false;
+        },
+    });
 };
 
 const getCheckinTexto = (tipo) => {
@@ -156,14 +191,26 @@ const getCheckinTexto = (tipo) => {
                         </div>
 
                         <div class="flex flex-wrap gap-2">
-                            <button
-                                v-if="puedeHacerCheckin() && !tieneCheckin()"
-                                @click="hacerCheckin"
-                                class="inline-flex items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 shadow-sm transition hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                            <Link
+                                v-if="$page.props.auth?.isAdmin && reserva?.id"
+                                :href="route('blockchain.reserva.history', reserva.id)"
+                                class="inline-flex items-center justify-center rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm font-bold text-blue-700 shadow-sm transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                             >
-                                <CheckCircleIcon class="mr-2 h-5 w-5" aria-hidden="true" />
-                                Hacer check-in
-                            </button>
+                                <ShieldCheckIcon class="mr-2 h-5 w-5" aria-hidden="true" />
+                                Ver trazabilidad
+                            </Link>
+
+                            <div
+                                v-if="puedeHacerCheckin() && !tieneCheckin()"
+                                class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-blue-900 shadow-sm"
+                            >
+                                <p class="text-sm font-bold">
+                                    Check-in disponible
+                                </p>
+                                <p class="mt-1 max-w-sm text-sm leading-5">
+                                    Presenta el código QR al personal autorizado para registrar el inicio del uso del aula.
+                                </p>
+                            </div>
 
                             <button
                                 v-if="reserva.estado === 'en_uso'"
@@ -174,14 +221,43 @@ const getCheckinTexto = (tipo) => {
                             </button>
 
                             <button
-                                v-if="['confirmada', 'aprobada', 'pendiente'].includes(reserva.estado)"
+                                v-if="puedeCancelar()"
                                 @click="cancelarReserva"
-                                class="inline-flex items-center justify-center rounded-xl border border-transparent bg-red-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                                :disabled="procesandoCancelacion"
+                                class="inline-flex items-center justify-center rounded-xl border border-transparent bg-red-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-red-300"
                             >
                                 <XCircleIcon class="mr-2 h-5 w-5" aria-hidden="true" />
-                                Cancelar reserva
+                                {{ procesandoCancelacion ? 'Cancelando...' : 'Cancelar reserva' }}
                             </button>
                         </div>
+                    </div>
+                </section>
+
+                <section
+                    v-if="successMessage || warningMessage || errorMessages.length"
+                    class="space-y-3"
+                >
+                    <div
+                        v-if="successMessage"
+                        class="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700"
+                    >
+                        <CheckCircleIcon class="mt-0.5 h-5 w-5 flex-none" aria-hidden="true" />
+                        <span>{{ successMessage }}</span>
+                    </div>
+                    <div
+                        v-if="warningMessage"
+                        class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700"
+                    >
+                        <ExclamationTriangleIcon class="mt-0.5 h-5 w-5 flex-none" aria-hidden="true" />
+                        <span>{{ warningMessage }}</span>
+                    </div>
+                    <div
+                        v-for="error in errorMessages"
+                        :key="error"
+                        class="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"
+                    >
+                        <XCircleIcon class="mt-0.5 h-5 w-5 flex-none" aria-hidden="true" />
+                        <span>{{ error }}</span>
                     </div>
                 </section>
 
@@ -329,12 +405,14 @@ const getCheckinTexto = (tipo) => {
                             </div>
                             <div class="p-5 sm:p-6">
                                 <div class="flex flex-col items-center rounded-2xl border border-slate-200 bg-white p-5">
-                                    <div class="flex min-h-44 w-full items-center justify-center rounded-xl border border-slate-200 bg-white p-4">
+                                    <div class="flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white p-4">
                                         <QrcodeVue
                                             v-if="reserva.qr_code && reserva.qr_code.startsWith('http')"
                                             :value="reserva.qr_code"
-                                            :size="168"
-                                            level="H"
+                                            :size="224"
+                                            level="M"
+                                            render-as="svg"
+                                            :margin="2"
                                         />
                                         <div v-else class="text-center text-slate-500">
                                             <QrCodeIcon class="mx-auto h-24 w-24" aria-hidden="true" />
@@ -342,6 +420,7 @@ const getCheckinTexto = (tipo) => {
                                         </div>
                                     </div>
                                     <button
+                                        v-if="$page.props.auth?.isAdmin"
                                         @click="router.visit(route('reservas.escanear'))"
                                         class="mt-4 inline-flex items-center justify-center rounded-xl border border-transparent bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                                     >
@@ -383,14 +462,17 @@ const getCheckinTexto = (tipo) => {
                             </div>
                         </section>
 
-                        <section v-if="reserva.asiento_blockchain" class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <section v-if="$page.props.auth?.isAdmin && reserva?.asiento_blockchain" class="rounded-2xl border border-slate-200 bg-white shadow-sm">
                             <div class="border-b border-slate-200 px-5 py-5 sm:px-6">
                                 <p class="border-l-4 border-blue-600 pl-3 text-sm font-bold text-slate-900">
-                                    Trazabilidad
+                                    Registro tecnico
                                 </p>
                                 <h2 class="mt-1 text-xl font-bold text-slate-900">
-                                    Registro Blockchain
+                                    Trazabilidad Blockchain
                                 </h2>
+                                <p class="mt-1 text-sm text-slate-600">
+                                    Consulta el registro tecnico y la verificacion de integridad asociados a esta reserva.
+                                </p>
                             </div>
                             <div class="p-5 sm:p-6">
                                 <div class="flex gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
@@ -438,5 +520,18 @@ const getCheckinTexto = (tipo) => {
                 </div>
             </div>
         </div>
+
+        <ConfirmationModal
+            :show="mostrarConfirmacion"
+            title="Cancelar reserva"
+            message="La reserva quedara cancelada y el aula volvera a estar disponible. Esta accion no elimina el historial."
+            confirm-text="Cancelar reserva"
+            cancel-text="Volver"
+            variant="danger"
+            :processing="procesandoCancelacion"
+            @confirm="confirmarCancelacion"
+            @cancel="cerrarConfirmacion"
+            @close="cerrarConfirmacion"
+        />
     </AuthenticatedLayout>
 </template>

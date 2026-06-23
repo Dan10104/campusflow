@@ -31,15 +31,55 @@
       <div class="nav__body__items">
         <template v-for="permiso in permisos" :key="permiso.codigo">
           <Link
-            v-if="permiso.estado"
+            v-if="permiso.estado && shouldShowPermission(permiso)"
             :href="route(permiso.ruta)"
-            :class="{ 'nav__body__items__active': isActiveRoute(permiso.ruta) }"
+            :class="{ 'nav__body__items__active': isMenuItemActive(permiso.ruta) }"
             :title="permiso.nombre"
           >
             <i :class="permiso.icono" aria-hidden="true"></i>
             <span>{{ permiso.nombre }}</span>
           </Link>
+
+          <Link
+            v-if="isAdmin && permiso.estado && permiso.ruta === 'admin.aprobaciones'"
+            :href="route('admin.reservas.index')"
+            :class="{ 'nav__body__items__active': route().current('admin.reservas.index') }"
+            title="Gestion de reservas"
+          >
+            <i class="bi bi-calendar2-week" aria-hidden="true"></i>
+            <span>Gestion de reservas</span>
+          </Link>
+
+          <Link
+            v-if="isAdmin && permiso.estado && permiso.ruta === 'admin.aprobaciones'"
+            :href="route('prestamos.index')"
+            :class="{ 'nav__body__items__active': route().current('prestamos.*') }"
+            title="Gestion de prestamos"
+          >
+            <i class="bi bi-box-seam" aria-hidden="true"></i>
+            <span>Gestion de prestamos</span>
+          </Link>
         </template>
+
+        <Link
+          v-if="isAdmin && !hasApprovalCenter"
+          :href="route('admin.reservas.index')"
+          :class="{ 'nav__body__items__active': route().current('admin.reservas.index') }"
+          title="Gestion de reservas"
+        >
+          <i class="bi bi-calendar2-week" aria-hidden="true"></i>
+          <span>Gestion de reservas</span>
+        </Link>
+
+        <Link
+          v-if="isAdmin && !hasApprovalCenter"
+          :href="route('prestamos.index')"
+          :class="{ 'nav__body__items__active': route().current('prestamos.*') }"
+          title="Gestion de prestamos"
+        >
+          <i class="bi bi-box-seam" aria-hidden="true"></i>
+          <span>Gestion de prestamos</span>
+        </Link>
       </div>
     </nav>
   </aside>
@@ -54,6 +94,10 @@ const { props } = usePage();
 const user = props.auth?.user;
 const permisos = props.auth?.permisos || [];
 const toggleSidebar = inject('toggleSidebar', () => {});
+const isAdmin = computed(() => Boolean(props.auth?.isAdmin));
+const hasApprovalCenter = computed(() =>
+  permisos.some((permiso) => permiso.estado && permiso.ruta === 'admin.aprobaciones'),
+);
 
 const userInitials = computed(() => {
   const displayName = user?.nombre || user?.name || user?.email || 'Usuario';
@@ -68,5 +112,17 @@ const userInitials = computed(() => {
 const isActiveRoute = (name) => {
   if (!name) return false;
   return route().current(name) || route().current(`${name.split('.')[0]}.*`);
+};
+
+const isMenuItemActive = (name) => {
+  if (name === 'admin.aprobaciones') {
+    return route().current('admin.aprobaciones');
+  }
+
+  return isActiveRoute(name);
+};
+
+const shouldShowPermission = (permiso) => {
+  return !(isAdmin.value && permiso?.ruta === 'prestamos.index');
 };
 </script>

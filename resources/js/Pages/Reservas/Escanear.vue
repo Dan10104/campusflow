@@ -11,12 +11,20 @@ const error = ref(null);
 const success = ref(null);
 const cameras = ref([]);
 const selectedCamera = ref(null);
+const processingScan = ref(false);
 let html5QrCode = null;
 
 const startScanning = async () => {
+    if (scanning.value || processingScan.value) {
+        return;
+    }
+
+    await stopScanning();
+
     error.value = null;
     success.value = null;
     result.value = null;
+    processingScan.value = false;
     
     try {
         const devices = await Html5Qrcode.getCameras();
@@ -43,20 +51,53 @@ const startScanning = async () => {
             error.value = "No se encontraron cámaras.";
         }
     } catch (err) {
+        await stopScanning();
         error.value = "Error al acceder a la cámara: " + err;
     }
 };
 
 const stopScanning = async () => {
-    if (html5QrCode && scanning.value) {
-        await html5QrCode.stop();
+    const scanner = html5QrCode;
+
+    if (!scanner) {
         scanning.value = false;
+        return;
     }
+
+    try {
+        if (scanning.value) {
+            await scanner.stop();
+        }
+    } catch (stopError) {
+        console.warn('No se pudo detener normalmente el lector.', stopError);
+    }
+
+    try {
+        if (typeof scanner.clear === 'function') {
+            scanner.clear();
+        }
+    } catch (clearError) {
+        console.warn('No se pudo limpiar el lector.', clearError);
+    }
+
+    if (html5QrCode === scanner) {
+        html5QrCode = null;
+    }
+
+    scanning.value = false;
 };
 
 const onScanSuccess = async (decodedText, decodedResult) => {
-    await stopScanning(); // Detener al encontrar algo
+    if (processingScan.value) {
+        return;
+    }
+
+    processingScan.value = true;
     result.value = decodedText;
+    success.value = null;
+    error.value = null;
+
+    await stopScanning();
     
     try {
         // Asumiendo que el QR contiene la URL firmada completa
@@ -70,6 +111,8 @@ const onScanSuccess = async (decodedText, decodedResult) => {
         } else {
             error.value = "URL inválida o error de conexión.";
         }
+    } finally {
+        processingScan.value = false;
     }
 };
 
@@ -92,13 +135,13 @@ onBeforeUnmount(() => {
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div class="min-w-0">
                             <p class="text-xs font-bold uppercase tracking-widest text-blue-600">
-                                Validación QR
+                                Validación de reservas
                             </p>
                             <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-900">
                                 Escanear reserva
                             </h1>
                             <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-                                Utiliza la cámara del dispositivo para validar el código QR asociado a una reserva.
+                                Escanea el código presentado por el usuario para registrar su check-in.
                             </p>
                         </div>
 
@@ -127,7 +170,7 @@ onBeforeUnmount(() => {
                     </div>
                 </section>
 
-                <div class="grid grid-cols-1 gap-6 lg:grid-cols-5">
+                <div v-if="$page.props.auth?.isAdmin" class="grid grid-cols-1 gap-6 lg:grid-cols-5">
                     <aside class="order-1 space-y-6 lg:order-2 lg:col-span-2">
                         <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                             <div class="flex items-start gap-3">
@@ -273,7 +316,8 @@ onBeforeUnmount(() => {
                                     <button
                                         type="button"
                                         @click="startScanning"
-                                        class="mt-5 inline-flex items-center justify-center rounded-xl border border-transparent bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                        :disabled="scanning || processingScan"
+                                        class="mt-5 inline-flex items-center justify-center rounded-xl border border-transparent bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                                     >
                                         Iniciar escáner
                                     </button>
@@ -296,7 +340,8 @@ onBeforeUnmount(() => {
                                         <button
                                             type="button"
                                             @click="stopScanning"
-                                            class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                            :disabled="processingScan"
+                                            class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                                         >
                                             Detener escáner
                                         </button>
@@ -304,7 +349,7 @@ onBeforeUnmount(() => {
                                 </div>
 
                                 <div
-                                    v-if="result && !success && !error"
+                                    v-if="processingScan && result && !success && !error"
                                     class="rounded-2xl border border-blue-200 bg-blue-50 p-5"
                                     role="status"
                                 >
@@ -312,7 +357,7 @@ onBeforeUnmount(() => {
                                         Código detectado
                                     </p>
                                     <p class="mt-1 text-sm leading-6 text-blue-900">
-                                        Procesando la validación de la reserva.
+                                        Validando la reserva...
                                     </p>
                                 </div>
 
@@ -349,7 +394,8 @@ onBeforeUnmount(() => {
                                             <button
                                                 type="button"
                                                 @click="startScanning"
-                                                class="mt-4 inline-flex items-center justify-center rounded-xl border border-transparent bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                                :disabled="scanning || processingScan"
+                                                class="mt-4 inline-flex items-center justify-center rounded-xl border border-transparent bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                                             >
                                                 Escanear otro código
                                             </button>
@@ -390,7 +436,8 @@ onBeforeUnmount(() => {
                                             <button
                                                 type="button"
                                                 @click="startScanning"
-                                                class="mt-4 inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                                :disabled="scanning || processingScan"
+                                                class="mt-4 inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                                             >
                                                 Intentar nuevamente
                                             </button>
@@ -413,6 +460,35 @@ onBeforeUnmount(() => {
                         </section>
                     </main>
                 </div>
+
+                <section
+                    v-else
+                    class="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm sm:p-10"
+                >
+                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-200 bg-blue-50 text-blue-600">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="1.5"
+                            stroke="currentColor"
+                            class="h-8 w-8"
+                            aria-hidden="true"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
+                            />
+                        </svg>
+                    </div>
+                    <h2 class="mt-5 text-xl font-bold text-slate-900">
+                        Acceso restringido
+                    </h2>
+                    <p class="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">
+                        La validación de códigos QR está disponible para Administradores y Encargados de Laboratorio.
+                    </p>
+                </section>
             </div>
         </div>
     </AuthenticatedLayout>

@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from "vue";
-import { Head, router } from "@inertiajs/vue3";
+import { Head, Link, router } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import {
     ArrowLeftIcon,
@@ -8,11 +8,14 @@ import {
     ClockIcon,
     UserIcon,
     CheckCircleIcon,
+    ShieldCheckIcon,
 } from "@heroicons/vue/24/outline";
 import QrcodeVue from "qrcode.vue";
 
 const props = defineProps({
     activo: Object,
+    disponible_para_prestamo: Boolean,
+    motivo_no_disponible: String,
 });
 
 const solicitarPrestamo = () => {
@@ -26,7 +29,6 @@ const volver = () => {
 const getEstadoBadge = (estado) => {
     const badges = {
         disponible: "border border-emerald-200 bg-emerald-50 text-emerald-800",
-        en_deposito: "border border-blue-200 bg-blue-50 text-blue-800",
         prestado: "border border-blue-200 bg-blue-50 text-blue-800",
         mantenimiento: "border border-amber-200 bg-amber-50 text-amber-800",
         baja: "border border-slate-200 bg-slate-100 text-slate-700",
@@ -37,7 +39,6 @@ const getEstadoBadge = (estado) => {
 const getEstadoTexto = (estado) => {
     const textos = {
         disponible: "Disponible",
-        en_deposito: "En Depósito",
         prestado: "Prestado",
         mantenimiento: "Mantenimiento",
         baja: "Dado de Baja",
@@ -96,16 +97,21 @@ const formatFecha = (fecha) => {
                             </p>
                         </div>
 
+                        <Link
+                            v-if="$page.props.auth?.isAdmin"
+                            :href="route('blockchain.activo.history', activo.codigo)"
+                            class="inline-flex items-center justify-center rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm font-bold text-blue-700 shadow-sm transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        >
+                            <ShieldCheckIcon class="mr-2 h-5 w-5" aria-hidden="true" />
+                            Ver historial Blockchain
+                        </Link>
+
                         <button
                             @click="solicitarPrestamo"
-                            :disabled="
-                                activo.estado !== 'disponible' &&
-                                activo.estado !== 'en_deposito'
-                            "
+                            :disabled="!disponible_para_prestamo"
                             :class="[
                                 'inline-flex items-center justify-center rounded-xl border border-transparent px-4 py-3 text-sm font-bold shadow-sm transition focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2',
-                                activo.estado === 'disponible' ||
-                                activo.estado === 'en_deposito'
+                                disponible_para_prestamo
                                     ? 'bg-[#2563EB] text-white hover:bg-[#1D4ED8]'
                                     : 'cursor-not-allowed bg-slate-200 text-slate-500',
                             ]"
@@ -310,7 +316,7 @@ const formatFecha = (fecha) => {
                             </h2>
 
                             <div
-                                v-if="activo.estado === 'disponible'"
+                                v-if="disponible_para_prestamo"
                                 class="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"
                             >
                                 <div class="flex items-start">
@@ -325,22 +331,6 @@ const formatFecha = (fecha) => {
                                     </div>
                                 </div>
                             </div>
-                            <div
-                                v-else-if="activo.estado === 'en_deposito'"
-                                class="mt-4 rounded-2xl border border-blue-200 bg-[#EFF6FF] p-4"
-                            >
-                                <div class="flex items-start">
-                                    <CheckCircleIcon class="mt-0.5 h-6 w-6 text-[#2563EB]" aria-hidden="true" />
-                                    <div class="ml-3">
-                                        <p class="text-sm font-bold text-blue-800">
-                                            En depósito
-                                        </p>
-                                        <p class="mt-1 text-sm leading-6 text-[#475569]">
-                                            Solicita la entrega del activo.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
                             <div v-else class="mt-4 rounded-2xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
                                 <div class="flex items-start">
                                     <div class="mt-1 h-4 w-4 rounded-full bg-[#CBD5E1]" />
@@ -349,8 +339,7 @@ const formatFecha = (fecha) => {
                                             No disponible
                                         </p>
                                         <p class="mt-1 text-sm leading-6 text-[#475569]">
-                                            Estado:
-                                            {{ getEstadoTexto(activo.estado) }}
+                                            {{ motivo_no_disponible || `Estado: ${getEstadoTexto(activo.estado)}` }}
                                         </p>
                                     </div>
                                 </div>

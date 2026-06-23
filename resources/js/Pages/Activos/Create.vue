@@ -188,8 +188,7 @@ const submit = () => {
                                         class="mt-2 block w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm font-semibold text-[#0F172A] shadow-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
                                     >
                                         <option value="disponible">Disponible</option>
-                                        <option value="en_deposito">En Depósito</option>
-                                        <option value="mantenimiento">Mantenimiento</option>
+                                        <option value="mantenimiento">En mantenimiento</option>
                                         <option value="baja">Dado de Baja</option>
                                     </select>
                                     <p v-if="form.errors.estado" class="mt-2 text-sm font-semibold text-red-600">{{ form.errors.estado }}</p>

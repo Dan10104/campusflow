@@ -1,10 +1,12 @@
 <script setup>
-import { computed } from "vue";
-import { Head, router } from "@inertiajs/vue3";
+import { computed, ref } from "vue";
+import { Head, router, usePage } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
+import ConfirmationModal from "@/Components/ConfirmationModal.vue";
 import {
     CalendarIcon,
     ClockIcon,
+    ExclamationTriangleIcon,
     MapPinIcon,
     CheckCircleIcon,
     XCircleIcon,
@@ -15,6 +17,17 @@ const props = defineProps({
     reservas: Array,
     usuario: Object,
 });
+
+const page = usePage();
+const reservaSeleccionada = ref(null);
+const mostrarConfirmacion = ref(false);
+const procesandoCancelacion = ref(false);
+
+const successMessage = computed(() => page.props.flash?.success || null);
+const warningMessage = computed(() => page.props.flash?.warning || null);
+const errorMessages = computed(() =>
+    Object.values(page.props.errors || {}).filter((message) => Boolean(message)),
+);
 
 const reservasPorEstado = computed(() => {
     const conteos = {};
@@ -91,17 +104,8 @@ const tieneCheckin = (reserva) => {
     );
 };
 
-const hacerCheckin = (reservaId) => {
-    router.post(
-        route("reservas.checkin", reservaId),
-        {},
-        {
-            preserveScroll: true,
-            onSuccess: () => {
-                // La pagina se recargara con los datos actualizados
-            },
-        },
-    );
+const puedeCancelar = (reserva) => {
+    return ["pendiente", "confirmada", "aprobada"].includes(reserva.estado);
 };
 
 const hacerCheckout = (reservaId) => {
@@ -117,12 +121,36 @@ const hacerCheckout = (reservaId) => {
     );
 };
 
-const cancelarReserva = (reservaId) => {
-    if (confirm("Estas seguro de que deseas cancelar esta reserva?")) {
-        router.delete(route("reservas.destroy", reservaId), {
-            preserveScroll: true,
-        });
-    }
+const cancelarReserva = (reserva) => {
+    if (procesandoCancelacion.value) return;
+
+    reservaSeleccionada.value = reserva;
+    mostrarConfirmacion.value = true;
+};
+
+const cerrarConfirmacion = () => {
+    if (procesandoCancelacion.value) return;
+
+    mostrarConfirmacion.value = false;
+    reservaSeleccionada.value = null;
+};
+
+const confirmarCancelacion = () => {
+    if (!reservaSeleccionada.value || procesandoCancelacion.value) return;
+
+    router.delete(route("reservas.destroy", reservaSeleccionada.value.id), {
+        preserveScroll: true,
+        onStart: () => {
+            procesandoCancelacion.value = true;
+        },
+        onSuccess: () => {
+            mostrarConfirmacion.value = false;
+            reservaSeleccionada.value = null;
+        },
+        onFinish: () => {
+            procesandoCancelacion.value = false;
+        },
+    });
 };
 </script>
 
@@ -153,6 +181,7 @@ const cancelarReserva = (reservaId) => {
                             </div>
                             <div class="flex flex-wrap gap-2">
                                 <button
+                                    v-if="$page.props.auth?.isAdmin"
                                     @click="router.visit(route('reservas.escanear'))"
                                     class="inline-flex items-center justify-center rounded-xl border border-transparent bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                                 >
@@ -186,6 +215,34 @@ const cancelarReserva = (reservaId) => {
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </section>
+
+                <section
+                    v-if="successMessage || warningMessage || errorMessages.length"
+                    class="space-y-3"
+                >
+                    <div
+                        v-if="successMessage"
+                        class="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700"
+                    >
+                        <CheckCircleIcon class="mt-0.5 h-5 w-5 flex-none" aria-hidden="true" />
+                        <span>{{ successMessage }}</span>
+                    </div>
+                    <div
+                        v-if="warningMessage"
+                        class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700"
+                    >
+                        <ExclamationTriangleIcon class="mt-0.5 h-5 w-5 flex-none" aria-hidden="true" />
+                        <span>{{ warningMessage }}</span>
+                    </div>
+                    <div
+                        v-for="error in errorMessages"
+                        :key="error"
+                        class="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"
+                    >
+                        <XCircleIcon class="mt-0.5 h-5 w-5 flex-none" aria-hidden="true" />
+                        <span>{{ error }}</span>
                     </div>
                 </section>
 
@@ -272,14 +329,18 @@ const cancelarReserva = (reservaId) => {
 
                                     <div
                                         v-if="reserva.qr_code"
-                                        class="flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:w-auto"
+                                        class="flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:w-auto sm:min-w-[204px]"
                                     >
-                                        <QrcodeVue
-                                            :value="reserva.qr_code"
-                                            :size="72"
-                                            level="M"
-                                        />
-                                        <div class="min-w-0 text-left sm:hidden">
+                                        <div class="inline-flex items-center justify-center rounded-xl bg-white p-3 ring-1 ring-slate-200">
+                                            <QrcodeVue
+                                                :value="reserva.qr_code"
+                                                :size="168"
+                                                level="M"
+                                                render-as="svg"
+                                                :margin="2"
+                                            />
+                                        </div>
+                                        <div class="min-w-0 text-center sm:hidden">
                                             <p class="text-xs font-bold uppercase tracking-wide text-slate-500">QR activo</p>
                                             <p class="text-sm font-semibold text-slate-900">Disponible para control</p>
                                         </div>
@@ -323,17 +384,20 @@ const cancelarReserva = (reservaId) => {
                                     Ver detalles
                                 </button>
 
-                                <button
+                                <div
                                     v-if="
                                         puedeHacerCheckin(reserva) &&
                                         !tieneCheckin(reserva)
                                     "
-                                    @click="hacerCheckin(reserva.id)"
-                                    class="inline-flex items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 shadow-sm transition hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                                    class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-blue-900 shadow-sm"
                                 >
-                                    <CheckCircleIcon class="mr-2 h-4 w-4" aria-hidden="true" />
-                                    Hacer check-in
-                                </button>
+                                    <p class="text-sm font-bold">
+                                        Check-in disponible
+                                    </p>
+                                    <p class="mt-1 text-sm leading-5">
+                                        Presenta el código QR de esta reserva a un Administrador o Encargado de Laboratorio.
+                                    </p>
+                                </div>
 
                                 <button
                                     v-if="reserva.estado === 'en_uso'"
@@ -344,18 +408,13 @@ const cancelarReserva = (reservaId) => {
                                 </button>
 
                                 <button
-                                    v-if="
-                                        [
-                                            'confirmada',
-                                            'aprobada',
-                                            'pendiente',
-                                        ].includes(reserva.estado)
-                                    "
-                                    @click="cancelarReserva(reserva.id)"
-                                    class="inline-flex items-center justify-center rounded-xl border border-transparent bg-red-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                                    v-if="puedeCancelar(reserva)"
+                                    @click="cancelarReserva(reserva)"
+                                    :disabled="procesandoCancelacion && reservaSeleccionada?.id === reserva.id"
+                                    class="inline-flex items-center justify-center rounded-xl border border-transparent bg-red-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-red-300"
                                 >
                                     <XCircleIcon class="mr-2 h-4 w-4" aria-hidden="true" />
-                                    Cancelar
+                                    {{ procesandoCancelacion && reservaSeleccionada?.id === reserva.id ? "Cancelando..." : "Cancelar" }}
                                 </button>
                             </div>
                         </div>
@@ -363,5 +422,18 @@ const cancelarReserva = (reservaId) => {
                 </div>
             </div>
         </div>
+
+        <ConfirmationModal
+            :show="mostrarConfirmacion"
+            title="Cancelar reserva"
+            message="Esta accion cancelara la reserva y liberara el aula para otras solicitudes. El historial se conservara."
+            confirm-text="Si, cancelar reserva"
+            cancel-text="Volver"
+            variant="danger"
+            :processing="procesandoCancelacion"
+            @confirm="confirmarCancelacion"
+            @cancel="cerrarConfirmacion"
+            @close="cerrarConfirmacion"
+        />
     </AuthenticatedLayout>
 </template>

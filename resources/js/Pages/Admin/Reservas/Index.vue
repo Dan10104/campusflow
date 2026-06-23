@@ -2,30 +2,21 @@
 import { computed, reactive } from "vue";
 import { Head, Link, router } from "@inertiajs/vue3";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import {
-    ClockIcon,
-    EyeIcon,
-    PlusIcon,
-} from "@heroicons/vue/24/outline";
 
 const props = defineProps({
-    prestamos: {
-        type: [Object, Array],
+    reservas: {
+        type: Object,
         required: true,
-    },
-    isAdmin: {
-        type: Boolean,
-        default: false,
-    },
-    modo_administrativo: {
-        type: Boolean,
-        default: false,
     },
     filtros: {
         type: Object,
         default: () => ({}),
     },
     estados: {
+        type: Array,
+        default: () => [],
+    },
+    aulas: {
         type: Array,
         default: () => [],
     },
@@ -38,39 +29,28 @@ const props = defineProps({
 const filtrosForm = reactive({
     buscar: props.filtros.buscar || "",
     estado: props.filtros.estado || "",
+    aula: props.filtros.aula || "",
     fecha_desde: props.filtros.fecha_desde || "",
     fecha_hasta: props.filtros.fecha_hasta || "",
 });
 
-const prestamosListado = computed(() =>
-    Array.isArray(props.prestamos) ? props.prestamos : props.prestamos?.data || [],
-);
+const reservasListado = computed(() => props.reservas?.data || []);
+const enlacesPaginacion = computed(() => props.reservas?.links || []);
 
-const enlacesPaginacion = computed(() =>
-    Array.isArray(props.prestamos) ? [] : props.prestamos?.links || [],
-);
-
-const totalPrestamos = computed(() =>
-    Array.isArray(props.prestamos)
-        ? props.prestamos.length
-        : props.prestamos?.total || 0,
-);
-
-const modoAdmin = computed(() => Boolean(props.modo_administrativo || props.isAdmin));
-
-const estadoLabels = {
+const estadosTexto = {
     pendiente: "Pendiente",
-    aprobado: "Aprobado",
-    entregado: "Entregado",
-    devuelto: "Devuelto",
-    vencido: "Vencido",
-    rechazado: "Rechazado",
+    aprobada: "Aprobada",
+    confirmada: "Confirmada",
+    en_uso: "En uso",
+    completada: "Completada",
+    cancelada: "Cancelada",
+    liberada_auto: "Liberada auto",
 };
 
 const estadoOptions = computed(() =>
     props.estados.map((estado) => ({
         value: estado,
-        label: estadoLabels[estado] || estado,
+        label: estadosTexto[estado] || estado,
     })),
 );
 
@@ -86,44 +66,24 @@ const resumenes = computed(() => [
         tone: "border-amber-200 bg-amber-50 text-amber-900",
     },
     {
-        label: "Aprobados",
-        value: props.conteos.aprobados || 0,
+        label: "Confirmadas",
+        value: props.conteos.confirmadas || 0,
         tone: "border-blue-200 bg-blue-50 text-blue-900",
     },
     {
-        label: "Entregados",
-        value: props.conteos.entregados || 0,
+        label: "En uso",
+        value: props.conteos.en_uso || 0,
         tone: "border-emerald-200 bg-emerald-50 text-emerald-900",
     },
     {
-        label: "Devueltos",
-        value: props.conteos.devueltos || 0,
+        label: "Completadas",
+        value: props.conteos.completadas || 0,
         tone: "border-slate-200 bg-slate-50 text-slate-800",
-    },
-    {
-        label: "Vencidos",
-        value: props.conteos.vencidos || 0,
-        tone: "border-red-200 bg-red-50 text-red-900",
-    },
-    {
-        label: "Rechazados",
-        value: props.conteos.rechazados || 0,
-        tone: "border-red-200 bg-red-50 text-red-700",
     },
 ]);
 
 const filtrosActivos = computed(() =>
     Object.values(filtrosForm).some((value) => String(value || "").trim() !== ""),
-);
-
-const pageTitle = computed(() =>
-    modoAdmin.value ? "Gestion de prestamos" : "Mis prestamos",
-);
-
-const pageDescription = computed(() =>
-    modoAdmin.value
-        ? "Consulta y supervisa todas las solicitudes, entregas y devoluciones de activos."
-        : "Consulta las solicitudes y prestamos de activos asociados a tu cuenta.",
 );
 
 const datosFiltro = () =>
@@ -134,7 +94,7 @@ const datosFiltro = () =>
     );
 
 const aplicarFiltros = () => {
-    router.get(route("prestamos.index"), datosFiltro(), {
+    router.get(route("admin.reservas.index"), datosFiltro(), {
         preserveState: true,
         preserveScroll: true,
         replace: true,
@@ -144,11 +104,12 @@ const aplicarFiltros = () => {
 const limpiarFiltros = () => {
     filtrosForm.buscar = "";
     filtrosForm.estado = "";
+    filtrosForm.aula = "";
     filtrosForm.fecha_desde = "";
     filtrosForm.fecha_hasta = "";
 
     router.get(
-        route("prestamos.index"),
+        route("admin.reservas.index"),
         {},
         {
             preserveState: true,
@@ -186,97 +147,102 @@ const formatHora = (fecha) => {
     });
 };
 
-const formatFechaHora = (fecha) => {
-    if (!fecha) return "Sin registro";
-
-    return `${formatFecha(fecha)} - ${formatHora(fecha)}`;
-};
-
 const getEstadoBadge = (estado) => {
     const badges = {
         pendiente: "border-amber-200 bg-amber-50 text-amber-800",
-        aprobado: "border-blue-200 bg-blue-50 text-blue-800",
-        entregado: "border-emerald-200 bg-emerald-50 text-emerald-800",
-        devuelto: "border-slate-200 bg-slate-100 text-slate-700",
-        vencido: "border-red-200 bg-red-50 text-red-800",
-        rechazado: "border-red-200 bg-red-50 text-red-700",
+        aprobada: "border-blue-200 bg-blue-50 text-blue-800",
+        confirmada: "border-blue-200 bg-blue-50 text-blue-800",
+        en_uso: "border-emerald-200 bg-emerald-50 text-emerald-800",
+        completada: "border-slate-200 bg-slate-100 text-slate-700",
+        cancelada: "border-red-200 bg-red-50 text-red-800",
+        liberada_auto: "border-cyan-200 bg-cyan-50 text-cyan-800",
     };
 
     return badges[estado] || "border-slate-200 bg-slate-100 text-slate-700";
 };
 
-const getEstadoLabel = (estado) => estadoLabels[estado] || estado || "Sin estado";
+const getEstadoTexto = (estado) => estadosTexto[estado] || estado || "Sin estado";
 
-const getControlPrestamo = (prestamo) => {
-    const controles = {
-        pendiente: "Pendiente de aprobacion",
-        aprobado: "Aprobado, pendiente de entrega",
-        entregado: "Activo entregado",
-        devuelto: "Activo devuelto",
-        vencido: "Prestamo vencido",
-        rechazado: "Solicitud rechazada",
+const tieneCheckin = (reserva) =>
+    Boolean(reserva.tiene_checkin) ||
+    Boolean(reserva.checkins?.some((checkin) => checkin.tipo === "checkin"));
+
+const tieneCheckout = (reserva) =>
+    Boolean(reserva.tiene_checkout) ||
+    Boolean(reserva.checkins?.some((checkin) => checkin.tipo === "checkout"));
+
+const getControlReserva = (reserva) => {
+    const checkin = tieneCheckin(reserva);
+    const checkout = tieneCheckout(reserva);
+
+    if (checkin && checkout) {
+        return {
+            label: "Finalizada",
+            className: "border-slate-200 bg-slate-100 text-slate-700",
+        };
+    }
+
+    if (checkin) {
+        return {
+            label: "En uso",
+            className: "border-emerald-200 bg-emerald-50 text-emerald-800",
+        };
+    }
+
+    return {
+        label: "Sin check-in",
+        className: "border-amber-200 bg-amber-50 text-amber-800",
     };
-
-    return controles[prestamo.estado] || "Sin informacion de control";
 };
 
-const activoDescripcion = (prestamo) =>
-    prestamo.activo?.descripcion || "Activo no disponible";
+const aulaLabel = (aula) => {
+    const modulo = aula?.modulo?.nombre ? ` - ${aula.modulo.nombre}` : "";
+    const facultad = aula?.modulo?.facultad?.sigla
+        ? ` (${aula.modulo.facultad.sigla})`
+        : "";
 
-const activoTipo = (prestamo) =>
-    prestamo.activo?.tipo_activo?.nombre ||
-    prestamo.activo?.tipoActivo?.nombre ||
-    "Tipo no registrado";
+    return `Aula ${aula?.codigo || "N/D"}${modulo}${facultad}`;
+};
+
+const motivoResumido = (motivo) => {
+    if (!motivo) return "Sin motivo registrado";
+
+    return motivo.length > 92 ? `${motivo.slice(0, 92)}...` : motivo;
+};
 </script>
 
 <template>
-    <Head :title="pageTitle" />
+    <Head title="Gestion de reservas" />
 
     <AuthenticatedLayout>
-        <div class="min-h-screen w-full bg-[#F5F7FB] text-[#0F172A]">
-            <div class="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
+        <div class="min-h-screen bg-[#F5F7FB] px-4 py-6 text-[#0F172A] sm:px-6 lg:px-8">
+            <div class="mx-auto flex w-full max-w-7xl flex-col gap-5">
                 <section class="rounded-2xl border border-[#E2E8F0] bg-white p-5 shadow-sm sm:p-6">
-                    <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                         <div class="min-w-0">
-                            <span
-                                v-if="modoAdmin"
-                                class="inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-blue-700"
-                            >
+                            <span class="inline-flex rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold uppercase tracking-wide text-blue-700">
                                 Gestion institucional
                             </span>
-                            <p
-                                v-else
-                                class="text-xs font-bold uppercase tracking-widest text-[#2563EB]"
-                            >
-                                Control personal de recursos
-                            </p>
                             <h1 class="mt-3 text-2xl font-black text-[#0F172A] sm:text-3xl">
-                                {{ pageTitle }}
+                                Gestion de reservas
                             </h1>
                             <p class="mt-2 max-w-3xl text-sm font-medium leading-6 text-[#475569] sm:text-base">
-                                {{ pageDescription }}
+                                Consulta y supervisa todas las reservas de aulas de la institucion.
                             </p>
                         </div>
 
-                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-                            <span class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-4 py-2.5 text-sm font-bold text-[#334155]">
-                                <ClockIcon class="h-5 w-5 shrink-0 text-[#2563EB]" aria-hidden="true" />
-                                {{ totalPrestamos }} prestamos
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                            <span class="block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                Registros
                             </span>
-
-                            <button
-                                type="button"
-                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#2563EB] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#1D4ED8] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2"
-                                @click="router.visit(route('activos.disponibles'))"
-                            >
-                                <PlusIcon class="h-5 w-5" aria-hidden="true" />
-                                Nuevo prestamo
-                            </button>
+                            <span class="text-lg font-black text-slate-900">
+                                {{ reservas.total || 0 }}
+                            </span>
                         </div>
                     </div>
                 </section>
 
-                <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                <section class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                     <article
                         v-for="resumen in resumenes"
                         :key="resumen.label"
@@ -293,10 +259,7 @@ const activoTipo = (prestamo) =>
                 </section>
 
                 <section class="rounded-2xl border border-[#E2E8F0] bg-white p-4 shadow-sm sm:p-5">
-                    <form
-                        class="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(170px,.8fr)_minmax(140px,.7fr)_minmax(140px,.7fr)_auto] lg:items-end"
-                        @submit.prevent="aplicarFiltros"
-                    >
+                    <form class="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(160px,.8fr)_minmax(170px,.9fr)_minmax(140px,.7fr)_minmax(140px,.7fr)_auto] lg:items-end" @submit.prevent="aplicarFiltros">
                         <div class="min-w-0">
                             <label for="buscar" class="block text-sm font-bold text-[#334155]">
                                 Buscar
@@ -306,7 +269,7 @@ const activoTipo = (prestamo) =>
                                 v-model="filtrosForm.buscar"
                                 type="search"
                                 class="mt-2 w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm font-medium text-[#0F172A] outline-none transition focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100"
-                                placeholder="ID, solicitante, activo o tipo"
+                                placeholder="ID, usuario, correo, aula o motivo"
                             />
                         </div>
 
@@ -326,6 +289,26 @@ const activoTipo = (prestamo) =>
                                     :value="estado.value"
                                 >
                                     {{ estado.label }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="aula" class="block text-sm font-bold text-[#334155]">
+                                Aula
+                            </label>
+                            <select
+                                id="aula"
+                                v-model="filtrosForm.aula"
+                                class="mt-2 w-full rounded-xl border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm font-medium text-[#0F172A] outline-none transition focus:border-[#2563EB] focus:ring-2 focus:ring-blue-100"
+                            >
+                                <option value="">Todas las aulas</option>
+                                <option
+                                    v-for="aula in aulas"
+                                    :key="aula.codigo"
+                                    :value="`${aula.codigo}`"
+                                >
+                                    {{ aulaLabel(aula) }}
                                 </option>
                             </select>
                         </div>
@@ -377,118 +360,101 @@ const activoTipo = (prestamo) =>
                 </section>
 
                 <section class="overflow-hidden rounded-2xl border border-[#E2E8F0] bg-white shadow-sm">
-                    <div class="border-b border-[#E2E8F0] px-5 py-4 sm:px-6">
-                        <h2 class="text-lg font-black text-[#0F172A]">
-                            Solicitudes registradas
-                        </h2>
-                        <p class="mt-1 text-sm font-medium text-[#475569]">
-                            {{ Array.isArray(prestamos) ? prestamosListado.length : (prestamos.from || 0) }}-{{ Array.isArray(prestamos) ? prestamosListado.length : (prestamos.to || 0) }} de {{ totalPrestamos }} registros
-                        </p>
+                    <div class="flex items-center justify-between gap-3 border-b border-[#E2E8F0] px-5 py-4">
+                        <div>
+                            <h2 class="text-lg font-black text-[#0F172A]">
+                                Reservas registradas
+                            </h2>
+                            <p class="text-sm font-medium text-[#475569]">
+                                {{ reservas.from || 0 }}-{{ reservas.to || 0 }} de {{ reservas.total || 0 }} registros
+                            </p>
+                        </div>
                     </div>
 
-                    <div v-if="prestamosListado.length > 0" class="hidden w-full overflow-x-auto lg:block">
-                        <table class="w-full min-w-[1060px] table-fixed text-left">
-                            <colgroup v-if="modoAdmin">
-                                <col class="w-[12%]" />
+                    <div v-if="reservasListado.length > 0" class="hidden w-full overflow-x-auto lg:block">
+                        <table class="w-full min-w-[1050px] table-fixed text-left">
+                            <colgroup>
                                 <col class="w-[17%]" />
-                                <col class="w-[19%]" />
                                 <col class="w-[18%]" />
+                                <col class="w-[17%]" />
+                                <col class="w-[17%]" />
                                 <col class="w-[10%]" />
-                                <col class="w-[14%]" />
                                 <col class="w-[10%]" />
+                                <col class="w-[11%]" />
                             </colgroup>
-                            <colgroup v-else>
-                                <col class="w-[14%]" />
-                                <col class="w-[26%]" />
-                                <col class="w-[22%]" />
-                                <col class="w-[12%]" />
-                                <col class="w-[16%]" />
-                                <col class="w-[10%]" />
-                            </colgroup>
-
                             <thead class="bg-slate-50 text-xs font-black uppercase tracking-wide text-slate-500">
                                 <tr>
-                                    <th class="px-4 py-3">Prestamo</th>
-                                    <th v-if="modoAdmin" class="px-4 py-3">Solicitante</th>
-                                    <th class="px-4 py-3">Activo</th>
-                                    <th class="px-4 py-3">Periodo</th>
+                                    <th class="px-4 py-3">Reserva</th>
+                                    <th class="px-4 py-3">Usuario</th>
+                                    <th class="px-4 py-3">Aula</th>
+                                    <th class="px-4 py-3">Fecha y horario</th>
                                     <th class="px-4 py-3">Estado</th>
-                                    <th class="px-4 py-3">Entrega / devolucion</th>
+                                    <th class="px-4 py-3">Control</th>
                                     <th class="px-4 py-3 text-center">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-[#E2E8F0]">
                                 <tr
-                                    v-for="prestamo in prestamosListado"
-                                    :key="prestamo.id"
+                                    v-for="reserva in reservasListado"
+                                    :key="reserva.id"
                                     class="align-top transition hover:bg-slate-50"
                                 >
                                     <td class="px-4 py-5">
                                         <p class="text-sm font-black text-[#0F172A]">
-                                            #{{ prestamo.id }}
+                                            #{{ reserva.id }}
                                         </p>
-                                        <p class="mt-1 whitespace-nowrap text-xs font-medium text-[#64748B]">
-                                            {{ formatFecha(prestamo.created_at) }}
+                                        <p class="mt-1 break-words text-sm font-medium leading-5 text-[#475569]">
+                                            {{ motivoResumido(reserva.proposito) }}
                                         </p>
                                     </td>
-
-                                    <td v-if="modoAdmin" class="px-4 py-5">
+                                    <td class="px-4 py-5">
                                         <p class="break-words text-sm font-bold text-[#0F172A]">
-                                            {{ prestamo.usuario?.nombre || "Usuario no disponible" }}
+                                            {{ reserva.usuario?.nombre || "Usuario no disponible" }}
                                         </p>
                                         <p class="mt-1 break-words text-sm font-medium text-slate-500">
-                                            {{ prestamo.usuario?.email || "Sin correo" }}
+                                            {{ reserva.usuario?.email || "Sin correo" }}
                                         </p>
                                     </td>
-
                                     <td class="px-4 py-5">
-                                        <p class="break-words text-sm font-black text-[#0F172A]">
-                                            {{ activoDescripcion(prestamo) }}
+                                        <p class="text-sm font-black text-[#0F172A]">
+                                            Aula {{ reserva.aula?.codigo || reserva.aula_codigo }}
                                         </p>
-                                        <p class="mt-1 break-all font-mono text-xs font-semibold text-[#475569]">
-                                            Codigo {{ prestamo.activo_codigo }}
+                                        <p class="mt-1 break-words text-xs font-semibold text-[#475569]">
+                                            {{ reserva.aula?.modulo?.nombre || "Modulo no registrado" }}
                                         </p>
-                                        <p class="mt-1 break-words text-xs font-medium text-[#64748B]">
-                                            {{ activoTipo(prestamo) }}
+                                        <p class="mt-1 text-xs font-medium text-[#64748B]">
+                                            {{ reserva.aula?.modulo?.facultad?.sigla || "Sin facultad" }}
                                         </p>
                                     </td>
-
                                     <td class="px-4 py-5">
                                         <p class="text-sm font-bold text-[#0F172A]">
-                                            {{ formatFecha(prestamo.inicio_previsto) }}
+                                            {{ formatFecha(reserva.inicio) }}
                                         </p>
                                         <p class="mt-1 whitespace-nowrap text-xs font-semibold text-[#475569]">
-                                            {{ formatHora(prestamo.inicio_previsto) }} - {{ formatHora(prestamo.fin_previsto) }}
-                                        </p>
-                                        <p v-if="prestamo.entregado_en" class="mt-2 text-xs font-medium text-emerald-700">
-                                            Entregado: {{ formatFechaHora(prestamo.entregado_en) }}
-                                        </p>
-                                        <p v-if="prestamo.devuelto_en" class="mt-1 text-xs font-medium text-slate-600">
-                                            Devuelto: {{ formatFechaHora(prestamo.devuelto_en) }}
+                                            {{ formatHora(reserva.inicio) }} - {{ formatHora(reserva.fin) }}
                                         </p>
                                     </td>
-
                                     <td class="px-4 py-5">
                                         <span
                                             class="inline-flex min-w-fit whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-black"
-                                            :class="getEstadoBadge(prestamo.estado)"
+                                            :class="getEstadoBadge(reserva.estado)"
                                         >
-                                            {{ getEstadoLabel(prestamo.estado) }}
+                                            {{ getEstadoTexto(reserva.estado) }}
                                         </span>
                                     </td>
-
                                     <td class="px-4 py-5">
-                                        <p class="break-words text-sm font-semibold leading-5 text-[#475569]">
-                                            {{ getControlPrestamo(prestamo) }}
-                                        </p>
+                                        <span
+                                            class="inline-flex min-w-fit whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-black"
+                                            :class="getControlReserva(reserva).className"
+                                        >
+                                            {{ getControlReserva(reserva).label }}
+                                        </span>
                                     </td>
-
                                     <td class="px-4 py-5 text-center">
                                         <Link
-                                            :href="route('prestamos.show', prestamo.id)"
-                                            class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                            :href="route('admin.reservas.show', reserva.id)"
+                                            class="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                         >
-                                            <EyeIcon class="h-4 w-4 shrink-0" aria-hidden="true" />
                                             Ver detalle
                                         </Link>
                                     </td>
@@ -497,103 +463,99 @@ const activoTipo = (prestamo) =>
                         </table>
                     </div>
 
-                    <div v-if="prestamosListado.length > 0" class="grid gap-3 p-4 lg:hidden">
+                    <div v-if="reservasListado.length > 0" class="grid gap-3 p-4 lg:hidden">
                         <article
-                            v-for="prestamo in prestamosListado"
-                            :key="`mobile-${prestamo.id}`"
+                            v-for="reserva in reservasListado"
+                            :key="`mobile-${reserva.id}`"
                             class="rounded-2xl border border-[#E2E8F0] bg-white p-4"
                         >
                             <div class="flex items-start justify-between gap-3">
                                 <div class="min-w-0">
                                     <p class="text-sm font-black text-[#0F172A]">
-                                        Prestamo #{{ prestamo.id }}
+                                        Reserva #{{ reserva.id }}
                                     </p>
-                                    <p class="mt-1 break-words text-sm font-semibold text-[#475569]">
-                                        {{ activoDescripcion(prestamo) }}
+                                    <p class="mt-1 break-words text-sm font-medium text-[#475569]">
+                                        {{ motivoResumido(reserva.proposito) }}
                                     </p>
                                 </div>
                                 <span
                                     class="shrink-0 rounded-full border px-2.5 py-1 text-xs font-black"
-                                    :class="getEstadoBadge(prestamo.estado)"
+                                    :class="getEstadoBadge(reserva.estado)"
                                 >
-                                    {{ getEstadoLabel(prestamo.estado) }}
+                                    {{ getEstadoTexto(reserva.estado) }}
                                 </span>
                             </div>
 
                             <dl class="mt-4 grid gap-3 text-sm">
-                                <div v-if="modoAdmin" class="rounded-xl bg-slate-50 p-3">
+                                <div class="rounded-xl bg-slate-50 p-3">
                                     <dt class="text-xs font-bold uppercase tracking-wide text-slate-500">
-                                        Solicitante
+                                        Usuario
                                     </dt>
                                     <dd class="mt-1 break-words font-bold text-[#0F172A]">
-                                        {{ prestamo.usuario?.nombre || "Usuario no disponible" }}
+                                        {{ reserva.usuario?.nombre || "Usuario no disponible" }}
                                     </dd>
                                     <dd class="break-words text-xs font-medium text-[#64748B]">
-                                        {{ prestamo.usuario?.email || "Sin correo" }}
+                                        {{ reserva.usuario?.email || "Sin correo" }}
                                     </dd>
                                 </div>
 
                                 <div class="grid gap-3 sm:grid-cols-2">
                                     <div class="rounded-xl bg-slate-50 p-3">
                                         <dt class="text-xs font-bold uppercase tracking-wide text-slate-500">
-                                            Activo
+                                            Aula
                                         </dt>
-                                        <dd class="mt-1 break-words font-bold text-[#0F172A]">
-                                            Codigo {{ prestamo.activo_codigo }}
+                                        <dd class="mt-1 font-bold text-[#0F172A]">
+                                            Aula {{ reserva.aula?.codigo || reserva.aula_codigo }}
                                         </dd>
-                                        <dd class="break-words text-xs font-medium text-[#64748B]">
-                                            {{ activoTipo(prestamo) }}
+                                        <dd class="text-xs font-medium text-[#64748B]">
+                                            {{ reserva.aula?.modulo?.nombre || "Modulo no registrado" }}
                                         </dd>
                                     </div>
 
                                     <div class="rounded-xl bg-slate-50 p-3">
                                         <dt class="text-xs font-bold uppercase tracking-wide text-slate-500">
-                                            Periodo
+                                            Fecha y horario
                                         </dt>
                                         <dd class="mt-1 font-bold text-[#0F172A]">
-                                            {{ formatFecha(prestamo.inicio_previsto) }}
+                                            {{ formatFecha(reserva.inicio) }}
                                         </dd>
-                                        <dd class="whitespace-nowrap text-xs font-medium text-[#64748B]">
-                                            {{ formatHora(prestamo.inicio_previsto) }} - {{ formatHora(prestamo.fin_previsto) }}
+                                        <dd class="text-xs font-medium text-[#64748B]">
+                                            {{ formatHora(reserva.inicio) }} - {{ formatHora(reserva.fin) }}
                                         </dd>
                                     </div>
                                 </div>
 
-                                <div class="rounded-xl bg-slate-50 p-3">
-                                    <dt class="text-xs font-bold uppercase tracking-wide text-slate-500">
-                                        Entrega / devolucion
-                                    </dt>
-                                    <dd class="mt-1 break-words font-bold text-[#0F172A]">
-                                        {{ getControlPrestamo(prestamo) }}
-                                    </dd>
-                                    <dd v-if="prestamo.entregado_en" class="mt-1 text-xs font-medium text-emerald-700">
-                                        Entregado: {{ formatFechaHora(prestamo.entregado_en) }}
-                                    </dd>
-                                    <dd v-if="prestamo.devuelto_en" class="mt-1 text-xs font-medium text-slate-600">
-                                        Devuelto: {{ formatFechaHora(prestamo.devuelto_en) }}
-                                    </dd>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span
+                                        class="inline-flex rounded-full border px-2.5 py-1 text-xs font-black"
+                                        :class="getControlReserva(reserva).className"
+                                    >
+                                        {{ getControlReserva(reserva).label }}
+                                    </span>
+                                    <span class="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-slate-500">
+                                        Detalle administrativo
+                                    </span>
                                 </div>
 
                                 <Link
-                                    :href="route('prestamos.show', prestamo.id)"
-                                    class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-blue-700 transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                    :href="route('admin.reservas.show', reserva.id)"
+                                    class="inline-flex w-full items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-100"
                                 >
-                                    <EyeIcon class="h-4 w-4" aria-hidden="true" />
                                     Ver detalle
                                 </Link>
                             </dl>
                         </article>
                     </div>
 
-                    <div v-if="prestamosListado.length === 0" class="flex flex-col items-center justify-center px-5 py-14 text-center">
-                        <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-200 bg-[#EFF6FF] text-[#2563EB]">
-                            <ClockIcon class="h-8 w-8" aria-hidden="true" />
+                    <div v-if="reservasListado.length === 0" class="flex flex-col items-center justify-center px-5 py-14 text-center">
+                        <div class="flex h-14 w-14 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-xl font-black text-[#2563EB]">
+                            CF
                         </div>
                         <h3 class="mt-4 text-lg font-black text-[#0F172A]">
-                            No se encontraron prestamos con los filtros seleccionados.
+                            No se encontraron reservas con los filtros seleccionados.
                         </h3>
-                        <p class="mx-auto mt-2 max-w-md text-sm font-medium leading-6 text-[#475569]">
-                            Ajusta la busqueda o limpia los filtros para volver al listado disponible.
+                        <p class="mt-2 max-w-md text-sm font-medium leading-6 text-[#475569]">
+                            Ajusta la busqueda o limpia los filtros para volver al listado completo.
                         </p>
                         <button
                             v-if="filtrosActivos"
@@ -610,7 +572,7 @@ const activoTipo = (prestamo) =>
                         class="flex flex-col gap-3 border-t border-[#E2E8F0] px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
                     >
                         <p class="text-sm font-medium text-[#475569]">
-                            Pagina {{ prestamos.current_page }} de {{ prestamos.last_page }}
+                            Pagina {{ reservas.current_page }} de {{ reservas.last_page }}
                         </p>
                         <div class="flex flex-wrap gap-2">
                             <button

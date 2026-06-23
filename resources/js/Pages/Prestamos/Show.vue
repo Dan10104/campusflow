@@ -1,59 +1,162 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import { Head, useForm, router } from "@inertiajs/vue3";
+import ConfirmationModal from "@/Components/ConfirmationModal.vue";
+import { Head, useForm, usePage, router } from "@inertiajs/vue3";
+import { computed, ref } from "vue";
 import {
     CalendarIcon,
     UserIcon,
     CubeIcon,
-    CheckCircleIcon,
     ArrowLeftIcon,
     HandThumbUpIcon,
     ArrowPathIcon,
     QrCodeIcon,
+    ClockIcon,
+    CheckCircleIcon,
+    ExclamationTriangleIcon,
 } from "@heroicons/vue/24/outline";
 import QrcodeVue from "qrcode.vue";
 
 const props = defineProps({
     prestamo: Object,
     isAdmin: Boolean,
+    puede_aprobar: Boolean,
+    puede_rechazar: Boolean,
+    puede_entregar: Boolean,
+    esperando_entrega: Boolean,
+    entrega_fuera_de_plazo: Boolean,
+    puede_devolver: Boolean,
+    entrega_disponible_desde: String,
 });
 
+const page = usePage();
 const form = useForm({});
+const procesando = ref("");
+const accionSeleccionada = ref(null);
+const mostrarConfirmacion = ref(false);
+const procesandoAccion = ref(false);
 
-const entregar = () => {
-    if (confirm("¿Confirmar entrega física del activo?")) {
-        form.post(route("prestamos.entregar", props.prestamo.id), {
-            preserveScroll: true,
-            onSuccess: () => alert("Activo entregado correctamente."),
-        });
-    }
+const isProcessing = computed(() => form.processing || Boolean(procesando.value));
+const successMessage = computed(() => page.props.flash?.success || null);
+const warningMessage = computed(() => page.props.flash?.warning || null);
+const errorMessages = computed(() =>
+    [
+        page.props.flash?.error,
+        page.props.errors?.prestamo,
+        ...Object.values(page.props.errors || {}),
+    ].filter((message, index, messages) => Boolean(message) && messages.indexOf(message) === index),
+);
+
+const formatDate = (value) => {
+    if (!value) return "No registrado";
+
+    return new Date(value).toLocaleString();
 };
 
-const devolver = () => {
-    const condicion = prompt(
-        "Condición de devolución (ej. Buen estado, Rayado):",
-        "Buen estado",
-    );
-    if (condicion) {
-        form.transform((data) => ({ ...data, condicion: condicion })).post(
-            route("prestamos.devolver", props.prestamo.id),
-            {
-                preserveScroll: true,
-                onSuccess: () => alert("Devolución registrada correctamente."),
-            },
-        );
-    }
+const abrirConfirmacion = (config) => {
+    if (isProcessing.value) return;
+
+    accionSeleccionada.value = {
+        cancelText: "Volver",
+        ...config,
+    };
+    mostrarConfirmacion.value = true;
+};
+
+const cerrarConfirmacion = () => {
+    if (procesandoAccion.value) return;
+
+    mostrarConfirmacion.value = false;
+    accionSeleccionada.value = null;
+};
+
+const confirmarAccion = () => {
+    if (!accionSeleccionada.value || procesandoAccion.value) return;
+
+    procesandoAccion.value = true;
+    procesando.value = accionSeleccionada.value.tipo;
+
+    form.post(route(accionSeleccionada.value.routeName, props.prestamo.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            mostrarConfirmacion.value = false;
+            accionSeleccionada.value = null;
+        },
+        onFinish: () => {
+            procesandoAccion.value = false;
+            procesando.value = "";
+        },
+    });
+};
+
+const aprobarSolicitud = () => {
+    abrirConfirmacion({
+        tipo: "aprobar",
+        title: "Aprobar solicitud",
+        message: "La solicitud sera aprobada. El activo continuara bloqueado para otras solicitudes, pero todavia no se registrara como entregado.",
+        confirmText: "Aprobar solicitud",
+        variant: "primary",
+        routeName: "prestamos.entregar",
+    });
+};
+
+const rechazarSolicitud = () => {
+    abrirConfirmacion({
+        tipo: "rechazar",
+        title: "Rechazar solicitud",
+        message: "La solicitud sera rechazada y el activo podra ser solicitado nuevamente cuando no exista otro prestamo activo. El historial se conservara.",
+        confirmText: "Rechazar solicitud",
+        variant: "danger",
+        routeName: "prestamos.rechazar",
+    });
+};
+
+const registrarEntrega = () => {
+    abrirConfirmacion({
+        tipo: "entregar",
+        title: "Registrar entrega",
+        message: "Confirma que el activo fue entregado fisicamente al solicitante. El prestamo pasara a Entregado y el activo quedara marcado como Prestado.",
+        confirmText: "Registrar entrega",
+        variant: "warning",
+        routeName: "prestamos.entregar",
+    });
+};
+
+const registrarDevolucion = () => {
+    abrirConfirmacion({
+        tipo: "devolver",
+        title: "Registrar devolucion",
+        message: "Confirma que el activo fue recibido fisicamente. El prestamo finalizara y el activo volvera a estar disponible cuando no exista otro prestamo fisico activo.",
+        confirmText: "Registrar devolucion",
+        variant: "primary",
+        routeName: "prestamos.devolver",
+    });
 };
 
 const getStatusColor = (status) => {
     const colors = {
-        aprobado: "border border-blue-200 bg-blue-50 text-blue-800",
         pendiente: "border border-amber-200 bg-amber-50 text-amber-800",
-        entregado: "border border-blue-200 bg-[#EFF6FF] text-blue-800",
+        aprobado: "border border-blue-200 bg-blue-50 text-blue-800",
+        entregado: "border border-indigo-200 bg-indigo-50 text-indigo-800",
         devuelto: "border border-emerald-200 bg-emerald-50 text-emerald-800",
-        cancelada: "border border-red-200 bg-red-50 text-red-800",
+        vencido: "border border-red-200 bg-red-50 text-red-800",
+        rechazado: "border border-red-200 bg-red-50 text-red-700",
     };
+
     return colors[status] || "border border-slate-200 bg-slate-100 text-slate-700";
+};
+
+const getStatusLabel = (status) => {
+    const labels = {
+        pendiente: "Pendiente",
+        aprobado: "Aprobado",
+        entregado: "Entregado",
+        devuelto: "Devuelto",
+        vencido: "Vencido",
+        rechazado: "Rechazado",
+    };
+
+    return labels[status] || status;
 };
 </script>
 
@@ -83,7 +186,7 @@ const getStatusColor = (status) => {
                                     class="inline-flex items-center justify-center rounded-full px-3 py-1 text-center text-xs font-semibold uppercase leading-none"
                                     :class="getStatusColor(prestamo.estado)"
                                 >
-                                    {{ prestamo.estado }}
+                                    {{ getStatusLabel(prestamo.estado) }}
                                 </span>
                             </div>
 
@@ -97,22 +200,165 @@ const getStatusColor = (status) => {
 
                         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
                             <button
-                                v-if="isAdmin && (prestamo.estado === 'pendiente' || prestamo.estado === 'aprobado')"
-                                @click="entregar"
-                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-transparent bg-[#2563EB] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#1D4ED8] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2"
+                                v-if="isAdmin && puede_aprobar"
+                                type="button"
+                                :disabled="isProcessing"
+                                @click="aprobarSolicitud"
+                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-transparent bg-[#2563EB] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#1D4ED8] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 <HandThumbUpIcon class="h-5 w-5 shrink-0" aria-hidden="true" />
-                                Entregar activo
+                                {{ procesando === "aprobar" ? "Procesando..." : "Aprobar solicitud" }}
                             </button>
 
                             <button
-                                v-if="isAdmin && prestamo.estado === 'entregado'"
-                                @click="devolver"
-                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-transparent bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                                v-if="isAdmin && puede_rechazar"
+                                type="button"
+                                :disabled="isProcessing"
+                                @click="rechazarSolicitud"
+                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-700 shadow-sm transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <ExclamationTriangleIcon class="h-5 w-5 shrink-0" aria-hidden="true" />
+                                {{ procesando === "rechazar" ? "Procesando..." : "Rechazar solicitud" }}
+                            </button>
+
+                            <button
+                                v-if="isAdmin && puede_entregar"
+                                type="button"
+                                :disabled="isProcessing"
+                                @click="registrarEntrega"
+                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-transparent bg-[#2563EB] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#1D4ED8] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <CheckCircleIcon class="h-5 w-5 shrink-0" aria-hidden="true" />
+                                {{ procesando === "entregar" ? "Procesando..." : "Registrar entrega" }}
+                            </button>
+
+                            <button
+                                v-if="isAdmin && puede_devolver"
+                                type="button"
+                                :disabled="isProcessing"
+                                @click="registrarDevolucion"
+                                class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-transparent bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 <ArrowPathIcon class="h-5 w-5 shrink-0" aria-hidden="true" />
-                                Registrar devolución
+                                {{ procesando === "devolver" ? "Procesando..." : "Registrar devolución" }}
                             </button>
+                        </div>
+                    </div>
+                </section>
+
+                <section v-if="successMessage || warningMessage || errorMessages.length" class="space-y-3">
+                    <div
+                        v-if="successMessage"
+                        class="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-semibold text-emerald-700"
+                    >
+                        {{ successMessage }}
+                    </div>
+
+                    <div
+                        v-if="warningMessage"
+                        class="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-700"
+                    >
+                        {{ warningMessage }}
+                    </div>
+
+                    <div
+                        v-for="error in errorMessages"
+                        :key="error"
+                        class="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-700"
+                    >
+                        {{ error }}
+                    </div>
+                </section>
+
+                <section
+                    v-if="esperando_entrega"
+                    class="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-blue-900 shadow-sm sm:p-6"
+                >
+                    <div class="flex gap-3">
+                        <ClockIcon class="mt-0.5 h-6 w-6 shrink-0 text-[#2563EB]" aria-hidden="true" />
+                        <div>
+                            <h2 class="text-base font-bold">Solicitud aprobada</h2>
+                            <p class="mt-1 text-sm leading-6">
+                                La entrega podrá registrarse desde 15 minutos antes del inicio previsto.
+                            </p>
+                            <p v-if="entrega_disponible_desde" class="mt-2 text-sm font-semibold">
+                                Disponible desde: {{ formatDate(entrega_disponible_desde) }}
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <section
+                    v-else-if="entrega_fuera_de_plazo"
+                    class="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900 shadow-sm sm:p-6"
+                >
+                    <div class="flex gap-3">
+                        <ExclamationTriangleIcon class="mt-0.5 h-6 w-6 shrink-0 text-amber-600" aria-hidden="true" />
+                        <div>
+                            <h2 class="text-base font-bold">Periodo de entrega finalizado</h2>
+                            <p class="mt-1 text-sm leading-6">
+                                La entrega ya no puede registrarse con este préstamo.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <section
+                    v-else-if="prestamo.estado === 'entregado'"
+                    class="rounded-2xl border border-indigo-200 bg-indigo-50 p-5 text-indigo-900 shadow-sm sm:p-6"
+                >
+                    <div class="flex gap-3">
+                        <CheckCircleIcon class="mt-0.5 h-6 w-6 shrink-0 text-indigo-600" aria-hidden="true" />
+                        <div>
+                            <h2 class="text-base font-bold">Activo entregado</h2>
+                            <p class="mt-1 text-sm leading-6">
+                                El equipo se encuentra actualmente en préstamo.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <section
+                    v-else-if="prestamo.estado === 'devuelto'"
+                    class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-900 shadow-sm sm:p-6"
+                >
+                    <div class="flex gap-3">
+                        <CheckCircleIcon class="mt-0.5 h-6 w-6 shrink-0 text-emerald-600" aria-hidden="true" />
+                        <div>
+                            <h2 class="text-base font-bold">Préstamo finalizado</h2>
+                            <p class="mt-1 text-sm leading-6">
+                                El activo fue devuelto y está disponible nuevamente.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <section
+                    v-else-if="prestamo.estado === 'rechazado'"
+                    class="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-900 shadow-sm sm:p-6"
+                >
+                    <div class="flex gap-3">
+                        <ExclamationTriangleIcon class="mt-0.5 h-6 w-6 shrink-0 text-red-600" aria-hidden="true" />
+                        <div>
+                            <h2 class="text-base font-bold">Solicitud rechazada</h2>
+                            <p class="mt-1 text-sm leading-6">
+                                Esta solicitud no fue autorizada y el activo puede ser solicitado nuevamente.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <section
+                    v-else-if="prestamo.estado === 'vencido'"
+                    class="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-900 shadow-sm sm:p-6"
+                >
+                    <div class="flex gap-3">
+                        <ExclamationTriangleIcon class="mt-0.5 h-6 w-6 shrink-0 text-red-600" aria-hidden="true" />
+                        <div>
+                            <h2 class="text-base font-bold">Préstamo vencido</h2>
+                            <p class="mt-1 text-sm leading-6">
+                                El activo continúa pendiente de devolución.
+                            </p>
                         </div>
                     </div>
                 </section>
@@ -136,14 +382,15 @@ const getStatusColor = (status) => {
                                         Activo solicitado
                                     </dt>
                                     <dd class="mt-2 break-words text-lg font-bold text-[#0F172A]">
-                                        {{ prestamo.activo.descripcion }}
+                                        {{ prestamo.activo?.descripcion || "Activo no disponible" }}
                                     </dd>
                                     <dd class="mt-2 break-words text-sm font-semibold text-[#475569]">
                                         Código:
                                         <span class="break-all font-mono text-[#334155]">{{ prestamo.activo_codigo }}</span>
                                         | Tipo:
                                         {{
-                                            prestamo.activo.tipo_activo?.nombre ||
+                                            prestamo.activo?.tipo_activo?.nombre ||
+                                            prestamo.activo?.tipoActivo?.nombre ||
                                             "General"
                                         }}
                                     </dd>
@@ -155,7 +402,7 @@ const getStatusColor = (status) => {
                                         Solicitante
                                     </dt>
                                     <dd class="mt-2 break-words text-sm font-bold text-[#0F172A]">
-                                        {{ prestamo.usuario.name }}
+                                        {{ prestamo.usuario?.nombre || "Usuario no disponible" }}
                                     </dd>
                                     <dd class="mt-1 text-xs font-semibold text-[#475569]">
                                         {{ prestamo.usuario_id }}
@@ -168,20 +415,34 @@ const getStatusColor = (status) => {
                                         Horario previsto
                                     </dt>
                                     <dd class="mt-2 text-sm font-semibold text-[#0F172A]">
-                                        Inicio:
-                                        {{
-                                            new Date(
-                                                prestamo.inicio_previsto,
-                                            ).toLocaleString()
-                                        }}
+                                        Inicio: {{ formatDate(prestamo.inicio_previsto) }}
                                     </dd>
                                     <dd class="mt-1 text-sm font-semibold text-[#475569]">
-                                        Fin:
-                                        {{
-                                            new Date(
-                                                prestamo.fin_previsto,
-                                            ).toLocaleString()
-                                        }}
+                                        Fin: {{ formatDate(prestamo.fin_previsto) }}
+                                    </dd>
+                                </div>
+
+                                <div
+                                    v-if="prestamo.condicion_salida"
+                                    class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4"
+                                >
+                                    <dt class="text-xs font-bold uppercase tracking-wide text-[#64748B]">
+                                        Condición de salida
+                                    </dt>
+                                    <dd class="mt-2 break-words text-sm font-semibold text-[#0F172A]">
+                                        {{ prestamo.condicion_salida }}
+                                    </dd>
+                                </div>
+
+                                <div
+                                    v-if="prestamo.condicion_retorno"
+                                    class="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4"
+                                >
+                                    <dt class="text-xs font-bold uppercase tracking-wide text-[#64748B]">
+                                        Condición de retorno
+                                    </dt>
+                                    <dd class="mt-2 break-words text-sm font-semibold text-[#0F172A]">
+                                        {{ prestamo.condicion_retorno }}
                                     </dd>
                                 </div>
 
@@ -193,11 +454,7 @@ const getStatusColor = (status) => {
                                         Entregado el
                                     </dt>
                                     <dd class="mt-2 text-sm font-bold text-[#0F172A]">
-                                        {{
-                                            new Date(
-                                                prestamo.entregado_en,
-                                            ).toLocaleString()
-                                        }}
+                                        {{ formatDate(prestamo.entregado_en) }}
                                     </dd>
                                 </div>
 
@@ -209,14 +466,7 @@ const getStatusColor = (status) => {
                                         Devuelto el
                                     </dt>
                                     <dd class="mt-2 text-sm font-bold text-[#0F172A]">
-                                        {{
-                                            new Date(
-                                                prestamo.devuelto_en,
-                                            ).toLocaleString()
-                                        }}
-                                    </dd>
-                                    <dd class="mt-1 break-words text-xs font-semibold text-emerald-800">
-                                        Condición: {{ prestamo.condicion_entrada }}
+                                        {{ formatDate(prestamo.devuelto_en) }}
                                     </dd>
                                 </div>
                             </dl>
@@ -232,12 +482,7 @@ const getStatusColor = (status) => {
                             <div class="mt-4">
                                 <a
                                     v-if="isAdmin"
-                                    :href="
-                                        route(
-                                            'blockchain.activo.history',
-                                            prestamo.activo_codigo,
-                                        )
-                                    "
+                                    :href="route('blockchain.activo.history', prestamo.activo_codigo)"
                                     class="inline-flex min-h-11 items-center justify-center rounded-xl border border-[#E2E8F0] bg-white px-4 py-2.5 text-sm font-bold text-[#2563EB] shadow-sm transition hover:bg-[#EFF6FF] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2"
                                 >
                                     Ver historial inmutable del activo
@@ -262,7 +507,7 @@ const getStatusColor = (status) => {
                                 <div class="mx-auto flex w-full max-w-xs flex-col items-center justify-center">
                                     <div class="flex w-full items-center justify-center rounded-2xl border border-[#E2E8F0] bg-white p-4">
                                         <QrcodeVue
-                                            v-if="prestamo.activo.qr_code"
+                                            v-if="prestamo.activo?.qr_code"
                                             :value="prestamo.activo.qr_code"
                                             :size="180"
                                             level="M"
@@ -293,10 +538,10 @@ const getStatusColor = (status) => {
                                 class="mt-4 inline-flex items-center justify-center rounded-full px-3 py-1 text-center text-xs font-semibold uppercase leading-none"
                                 :class="getStatusColor(prestamo.estado)"
                             >
-                                {{ prestamo.estado }}
+                                {{ getStatusLabel(prestamo.estado) }}
                             </span>
 
-                            <div v-if="form.processing" class="mt-4 rounded-xl border border-blue-200 bg-[#EFF6FF] px-4 py-3 text-sm font-bold text-blue-800">
+                            <div v-if="isProcessing" class="mt-4 rounded-xl border border-blue-200 bg-[#EFF6FF] px-4 py-3 text-sm font-bold text-blue-800">
                                 Procesando acción...
                             </div>
                         </section>
@@ -304,5 +549,18 @@ const getStatusColor = (status) => {
                 </div>
             </div>
         </div>
+
+        <ConfirmationModal
+            :show="mostrarConfirmacion"
+            :title="accionSeleccionada?.title || ''"
+            :message="accionSeleccionada?.message || ''"
+            :confirm-text="accionSeleccionada?.confirmText || 'Confirmar'"
+            :cancel-text="accionSeleccionada?.cancelText || 'Volver'"
+            :variant="accionSeleccionada?.variant || 'primary'"
+            :processing="procesandoAccion"
+            @confirm="confirmarAccion"
+            @cancel="cerrarConfirmacion"
+            @close="cerrarConfirmacion"
+        />
     </AuthenticatedLayout>
 </template>

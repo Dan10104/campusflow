@@ -2,111 +2,157 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Redirect;
-use Inertia\Response;
-use Inertia\Inertia;
 use App\Models\Activo;
+use App\Models\ReservaActivos;
 use App\Models\TipoActivo;
-use App\Models\ReservaActivos; // <--- Modelo Correcto
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Redirect;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class ActivoController extends Controller
 {
+    private const ESTADOS_PRESTAMO_ACTIVO = ['pendiente', 'aprobado', 'entregado', 'vencido'];
+
     public function disponibles(Request $request): Response
     {
-        // Filtramos solo los disponibles según tu lógica de negocio
         $query = Activo::with(['tipoActivo'])
-            ->where('estado', 'disponible'); 
-        
-        // Filtros
+            ->where('estado', 'disponible')
+            ->whereDoesntHave('reservasActivos', function ($prestamos) {
+                $prestamos->whereIn('estado', self::ESTADOS_PRESTAMO_ACTIVO);
+            });
+
         if ($request->filled('busqueda')) {
             $busqueda = $request->busqueda;
-            $query->where(function($q) use ($busqueda) {
+            $query->where(function ($q) use ($busqueda) {
                 $q->where('descripcion', 'like', "%{$busqueda}%")
                   ->orWhere('marca', 'like', "%{$busqueda}%")
                   ->orWhere('modelo', 'like', "%{$busqueda}%")
-                  ->orWhereHas('tipoActivo', function($q) use ($busqueda) {
+                  ->orWhereHas('tipoActivo', function ($q) use ($busqueda) {
                       $q->where('nombre', 'like', "%{$busqueda}%");
                   });
             });
         }
-        
+
         if ($request->filled('tipo')) {
             $query->where('tipo_activo_id', $request->tipo);
         }
-        
+
         $activos = $query->orderBy('descripcion')->get();
         $tiposActivo = TipoActivo::orderBy('nombre')->get();
-        
+
         return Inertia::render('Activos/Disponibles', [
             'activos' => $activos,
             'tiposActivo' => $tiposActivo,
             'filtros' => $request->only(['busqueda', 'tipo'])
         ]);
     }
-    
+
     public function show(int $codigo): Response
     {
         $activo = Activo::with(['tipoActivo'])->findOrFail($codigo);
-        
+        $prestamoActivo = ReservaActivos::query()
+            ->where('activo_codigo', $activo->codigo)
+            ->whereIn('estado', self::ESTADOS_PRESTAMO_ACTIVO)
+            ->orderByRaw("CASE estado WHEN 'pendiente' THEN 1 WHEN 'aprobado' THEN 2 WHEN 'entregado' THEN 3 WHEN 'vencido' THEN 4 ELSE 5 END")
+            ->first(['id', 'activo_codigo', 'estado']);
+
+        $disponibleParaPrestamo = $activo->estado === 'disponible' && !$prestamoActivo;
+
         return Inertia::render('Activos/Show', [
-            'activo' => $activo
+            'activo' => $activo,
+            'disponible_para_prestamo' => $disponibleParaPrestamo,
+            'motivo_no_disponible' => $this->motivoNoDisponible($activo, $prestamoActivo),
         ]);
     }
 
+    private function motivoNoDisponible(Activo $activo, ?ReservaActivos $prestamoActivo): ?string
+    {
+        if ($activo->estado === 'mantenimiento') {
+            return 'El activo está en mantenimiento.';
+        }
+
+        if ($activo->estado === 'baja') {
+            return 'El activo fue dado de baja.';
+        }
+
+        if ($activo->estado === 'prestado') {
+            return 'El activo se encuentra prestado.';
+        }
+
+        if (!$prestamoActivo) {
+            return null;
+        }
+
+        return match ($prestamoActivo->estado) {
+            'pendiente' => 'El activo tiene una solicitud pendiente.',
+            'aprobado' => 'El activo tiene un préstamo aprobado pendiente de entrega.',
+            'entregado' => 'El activo se encuentra prestado.',
+            'vencido' => 'El préstamo asociado está vencido.',
+            default => 'El activo no se encuentra disponible para préstamo.',
+        };
+    }
+
     /**
-     * Método para procesar la solicitud (Corresponde a la Prueba de Caja Blanca)
+     * Metodo legacy para procesar solicitudes directas de activos.
      */
     public function solicitar(Request $request)
     {
-        // Validación: 'codigo' es la PK en tu tabla activos
         $request->validate([
-            'activo_codigo' => 'required|exists:activos,codigo' 
+            'activo_codigo' => 'required|exists:activos,codigo'
         ]);
 
-        // (1) Nodo 1: Búsqueda del activo
-        $activo = Activo::findOrFail($request->activo_codigo);
-
-        // (2) Nodo 2: Validación de Stock (Lógica de negocio)
-        if ($activo->estado !== 'disponible') {
-            // (F1) Salida Falsa 1
-            return Redirect::back()->with('error', 'El activo no se encuentra disponible.');
-        }
-
-        // (3) Nodo 3: Validación de usuario (Sanciones/Deudas)
-        // Verificamos si tiene alguna reserva activa en estado 'vencido'
-        $tieneSanciones = ReservaActivos::where('usuario_id', Auth::id())
+        $usuario = $request->user();
+        $tieneSanciones = ReservaActivos::where('usuario_id', $usuario->codigo)
                                   ->where('estado', 'vencido')
                                   ->exists();
 
         if ($tieneSanciones) {
-            // (F2) Salida Falsa 2
             return Redirect::back()->with('error', 'Usuario bloqueado: Tiene devoluciones pendientes.');
         }
 
-        // (4) Nodo 4: Registro del Préstamo (ReservaActivos)
-        ReservaActivos::create([
-            'usuario_id' => Auth::id(),
-            'activo_codigo' => $activo->codigo, // Usamos 'codigo' no 'id'
-            'inicio_previsto' => now(), // Asumimos inicio inmediato
-            // 'fin_previsto' => now()->addHours(2), // Opcional: si tienes lógica de duración
-            'estado' => 'pendiente'
-        ]);
-        
-        // Actualizar estado del activo para evitar que otro lo tome
-        $activo->update(['estado' => 'prestado']); 
+        try {
+            DB::transaction(function () use ($request, $usuario) {
+                $activo = Activo::query()
+                    ->lockForUpdate()
+                    ->findOrFail($request->activo_codigo);
 
-        // (5) Nodo 5: Retorno de éxito
-        // (V) Salida Verdadera
+                if ($activo->estado !== 'disponible') {
+                    throw new \DomainException('El activo no se encuentra disponible para préstamo.');
+                }
+
+                $tienePrestamoActivo = ReservaActivos::query()
+                    ->where('activo_codigo', $activo->codigo)
+                    ->whereIn('estado', self::ESTADOS_PRESTAMO_ACTIVO)
+                    ->exists();
+
+                if ($tienePrestamoActivo) {
+                    throw new \RuntimeException('El activo ya tiene una solicitud o préstamo activo.');
+                }
+
+                ReservaActivos::create([
+                    'usuario_id' => $usuario->codigo,
+                    'activo_codigo' => $activo->codigo,
+                    'inicio_previsto' => now(),
+                    'fin_previsto' => now()->addHours(2),
+                    'estado' => 'pendiente'
+                ]);
+            });
+        } catch (\DomainException $e) {
+            return Redirect::back()->with('error', $e->getMessage());
+        } catch (\RuntimeException $e) {
+            return Redirect::back()->with('error', $e->getMessage());
+        }
+
         return Redirect::route('activos.disponibles')
-               ->with('success', 'Solicitud registrada correctamente.');
+               ->with('success', 'Solicitud de préstamo registrada correctamente.');
     }
 
     public function create(Request $request): Response
     {
         if (!$request->user()->esAdmin()) { abort(403, 'Acceso denegado'); }
-        // Obtenemos los tipos para el select
+
         $tiposActivo = TipoActivo::orderBy('nombre')->get();
 
         return Inertia::render('Activos/Create', [
@@ -117,6 +163,7 @@ class ActivoController extends Controller
     public function store(Request $request)
     {
         if (!$request->user()->esAdmin()) { abort(403, 'Acceso denegado'); }
+
         $validated = $request->validate([
             'descripcion' => 'required|string|max:500',
             'tipo_activo_id' => 'required|exists:tipo_activo,id',
@@ -127,23 +174,20 @@ class ActivoController extends Controller
             'estado' => 'required|in:disponible,en_deposito,mantenimiento,baja',
         ]);
 
+        if ($validated['estado'] === 'en_deposito') {
+            $validated['estado'] = 'disponible';
+        }
+
         Activo::create($validated);
 
-        // Asumiendo que tienes una ruta index, o redirige a disponibles
         return Redirect::route('activos.disponibles')
             ->with('success', 'Activo creado exitosamente.');
     }
 
     public function report(Request $request)
     {
-        // Reusamos la lógica de filtrado básica o simplemente traemos todos los disponibles
-        // Para simplificar el reporte, traeremos todos los que no esten de baja, o solo disponibles?
-        // El usuario pidió "lista de activos", generalmente implica inventario.
-        // Pero ajustaremos a "Disponibles" si viene de esa vista o General.
-        // Haremos un reporte general de items que no esten "baja" o todos.
-        
         $activos = Activo::with(['tipoActivo'])->orderBy('descripcion')->get();
-        
+
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.activos', compact('activos'));
         return $pdf->download('reporte_activos.pdf');
     }

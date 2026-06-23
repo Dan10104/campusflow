@@ -15,7 +15,6 @@ const props = defineProps({
 // Estado local
 const busqueda = ref(props.filtros?.busqueda || '');
 const tipoSeleccionado = ref(props.filtros?.tipo || '');
-const estadoSeleccionado = ref(props.filtros?.estado || 'disponible');
 const mostrarFiltros = ref(false);
 
 // Activos filtrados
@@ -59,8 +58,7 @@ const limpiarFiltros = () => {
 const aplicarFiltros = () => {
     router.get(route('activos.disponibles'), {
         busqueda: busqueda.value,
-        tipo: tipoSeleccionado.value,
-        estado: estadoSeleccionado.value
+        tipo: tipoSeleccionado.value
     }, {
         preserveState: true,
         preserveScroll: true
@@ -71,7 +69,6 @@ const aplicarFiltros = () => {
 const getEstadoBadge = (estado) => {
     const badges = {
         'disponible': 'border border-emerald-200 bg-emerald-50 text-emerald-800',
-        'en_deposito': 'border border-blue-200 bg-blue-50 text-blue-800',
         'prestado': 'border border-blue-200 bg-blue-50 text-blue-800',
         'mantenimiento': 'border border-amber-200 bg-amber-50 text-amber-800',
         'baja': 'border border-slate-200 bg-slate-100 text-slate-700'
@@ -82,7 +79,6 @@ const getEstadoBadge = (estado) => {
 const getEstadoTexto = (estado) => {
     const textos = {
         'disponible': 'Disponible',
-        'en_deposito': 'En Depósito',
         'prestado': 'Prestado',
         'mantenimiento': 'Mantenimiento',
         'baja': 'Dado de Baja'
@@ -178,9 +174,6 @@ const getEstadoTexto = (estado) => {
                         <span v-if="tipoSeleccionado" class="rounded-full border border-blue-200 bg-[#EFF6FF] px-3 py-1 text-blue-800">
                             Tipo seleccionado
                         </span>
-                        <span v-if="estadoSeleccionado" class="rounded-full border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-1">
-                            Estado: {{ getEstadoTexto(estadoSeleccionado) }}
-                        </span>
                     </div>
 
                     <transition
@@ -192,7 +185,7 @@ const getEstadoTexto = (estado) => {
                         leave-to-class="opacity-0 -translate-y-1"
                     >
                         <div v-show="mostrarFiltros" class="mt-5 border-t border-[#E2E8F0] pt-5">
-                            <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                                 <div>
                                     <label class="mb-2 block text-sm font-bold text-[#334155]">
                                         Tipo de activo
@@ -210,21 +203,6 @@ const getEstadoTexto = (estado) => {
                                         >
                                             {{ tipo.nombre }}
                                         </option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label class="mb-2 block text-sm font-bold text-[#334155]">
-                                        Estado
-                                    </label>
-                                    <select
-                                        v-model="estadoSeleccionado"
-                                        @change="aplicarFiltros"
-                                        class="block w-full rounded-xl border border-[#E2E8F0] bg-white px-3 py-3 text-sm font-semibold text-[#0F172A] shadow-sm focus:border-[#2563EB] focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
-                                    >
-                                        <option value="disponible">Disponible</option>
-                                        <option value="en_deposito">En Depósito</option>
-                                        <option value="">Todos</option>
                                     </select>
                                 </div>
 
@@ -248,7 +226,7 @@ const getEstadoTexto = (estado) => {
                             <CubeIcon class="h-8 w-8" aria-hidden="true" />
                         </div>
                         <h2 class="mt-4 text-lg font-bold text-[#0F172A]">
-                            No se encontraron activos
+                            No hay activos disponibles para préstamo en este momento.
                         </h2>
                         <p class="mx-auto mt-2 max-w-md text-sm leading-6 text-[#475569]">
                             Intenta ajustar la búsqueda o limpiar los filtros aplicados.
@@ -316,10 +294,6 @@ const getEstadoTexto = (estado) => {
                                         <CheckCircleIcon class="mr-2 h-5 w-5 text-emerald-600" aria-hidden="true" />
                                         Disponible para préstamo
                                     </div>
-                                    <div v-else-if="activo.estado === 'en_deposito'" class="flex items-center text-sm font-bold text-blue-800">
-                                        <CheckCircleIcon class="mr-2 h-5 w-5 text-[#2563EB]" aria-hidden="true" />
-                                        En depósito - Solicitar entrega
-                                    </div>
                                     <div v-else class="flex items-center text-sm font-bold text-[#475569]">
                                         <ExclamationCircleIcon class="mr-2 h-5 w-5 text-[#64748B]" aria-hidden="true" />
                                         No disponible actualmente
@@ -336,10 +310,10 @@ const getEstadoTexto = (estado) => {
                                 </button>
                                 <button
                                     @click="solicitarPrestamo(activo)"
-                                    :disabled="activo.estado !== 'disponible' && activo.estado !== 'en_deposito'"
+                                    :disabled="activo.estado !== 'disponible'"
                                     :class="[
                                         'inline-flex items-center justify-center rounded-xl border border-transparent px-4 py-2.5 text-sm font-bold shadow-sm transition focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2',
-                                        activo.estado === 'disponible' || activo.estado === 'en_deposito'
+                                        activo.estado === 'disponible'
                                             ? 'bg-[#2563EB] text-white hover:bg-[#1D4ED8]'
                                             : 'cursor-not-allowed bg-slate-200 text-slate-500'
                                     ]"

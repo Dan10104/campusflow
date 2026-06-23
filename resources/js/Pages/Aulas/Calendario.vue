@@ -1,15 +1,19 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import ConfirmationModal from '@/Components/ConfirmationModal.vue';
 import {
     ArrowLeftIcon,
     CalendarIcon,
     ClockIcon,
+    CheckCircleIcon,
+    ExclamationTriangleIcon,
     UserIcon,
     MapPinIcon,
     BuildingOfficeIcon,
-    UserGroupIcon
+    UserGroupIcon,
+    XCircleIcon
 } from '@heroicons/vue/24/outline';
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
@@ -22,29 +26,60 @@ const props = defineProps({
     isAdmin: Boolean,
 });
 
-const aprobarReserva = (id) => {
-    if (confirm('¿Estás seguro de aprobar esta reserva?')) {
-        router.post(route('admin.reservas.aprobar', id), {}, {
-            onSuccess: () => {
-                // Inertia recargará la página automáticamente
-            }
-        });
-    }
+const page = usePage();
+const reservaParaAprobar = ref(null);
+const procesandoAprobacion = ref(false);
+
+const successMessage = computed(() => page.props.flash?.success || null);
+const warningMessage = computed(() => page.props.flash?.warning || null);
+const errorMessages = computed(() => Object.values(page.props.errors || {}).filter(Boolean));
+
+const aprobarReserva = (reserva) => {
+    if (procesandoAprobacion.value) return;
+
+    reservaParaAprobar.value = reserva;
 };
 
 const handleEventClick = (info) => {
-    const props = info.event.extendedProps;
-    if (props.estado === 'pendiente' && isAdmin.value) {
-         if (confirm(`Solicitud de: ${props.usuario}\nPropósito: ${props.proposito}\n\n¿Desea APROBAR esta reserva?`)) {
-             router.post(route('admin.reservas.aprobar', info.event.id));
-         }
-    } else {
-        // Mostrar detalles simples
-        alert(`Reserva de: ${props.usuario}\nEstado: ${getEstadoTexto(props.estado)}\nPropósito: ${props.proposito || 'N/A'}`);
+    const evento = info.event.extendedProps;
+
+    if (evento.estado === 'pendiente' && isAdmin.value) {
+        reservaParaAprobar.value = {
+            id: info.event.id,
+            usuario: { nombre: evento.usuario },
+            proposito: evento.proposito,
+        };
+
+        return;
     }
+
+    router.visit(route(isAdmin.value ? 'admin.reservas.show' : 'reservas.show', info.event.id));
 };
 
 const isAdmin = computed(() => props.isAdmin);
+
+const cerrarConfirmacionAprobacion = () => {
+    if (procesandoAprobacion.value) return;
+
+    reservaParaAprobar.value = null;
+};
+
+const confirmarAprobacion = () => {
+    if (!reservaParaAprobar.value || procesandoAprobacion.value) return;
+
+    router.post(route('admin.reservas.aprobar', reservaParaAprobar.value.id), {}, {
+        preserveScroll: true,
+        onStart: () => {
+            procesandoAprobacion.value = true;
+        },
+        onSuccess: () => {
+            reservaParaAprobar.value = null;
+        },
+        onFinish: () => {
+            procesandoAprobacion.value = false;
+        },
+    });
+};
 
 // ... (resto de funciones) ...
 
@@ -232,6 +267,34 @@ const calendarOptions = computed(() => ({
                     </div>
                 </header>
 
+                <section
+                    v-if="successMessage || warningMessage || errorMessages.length"
+                    class="space-y-3"
+                >
+                    <div
+                        v-if="successMessage"
+                        class="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700"
+                    >
+                        <CheckCircleIcon class="mt-0.5 h-5 w-5 flex-none" aria-hidden="true" />
+                        <span>{{ successMessage }}</span>
+                    </div>
+                    <div
+                        v-if="warningMessage"
+                        class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700"
+                    >
+                        <ExclamationTriangleIcon class="mt-0.5 h-5 w-5 flex-none" aria-hidden="true" />
+                        <span>{{ warningMessage }}</span>
+                    </div>
+                    <div
+                        v-for="error in errorMessages"
+                        :key="error"
+                        class="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"
+                    >
+                        <XCircleIcon class="mt-0.5 h-5 w-5 flex-none" aria-hidden="true" />
+                        <span>{{ error }}</span>
+                    </div>
+                </section>
+
                 <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     <article class="rounded-2xl border border-[var(--cf-border)] bg-[var(--cf-surface)] p-4 shadow-sm">
                         <p class="text-xs font-bold uppercase tracking-wide text-[var(--cf-text-muted)]">Código</p>
@@ -401,11 +464,12 @@ const calendarOptions = computed(() => ({
 
                                                 <button
                                                     v-if="isAdmin && reserva.estado === 'pendiente'"
-                                                    @click="aprobarReserva(reserva.id)"
+                                                    @click="aprobarReserva(reserva)"
                                                     type="button"
-                                                    class="inline-flex min-h-8 items-center rounded-lg border border-emerald-600 bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-500/25"
+                                                    :disabled="procesandoAprobacion && reservaParaAprobar?.id === reserva.id"
+                                                    class="inline-flex min-h-8 items-center rounded-lg border border-emerald-600 bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-500/25 disabled:cursor-not-allowed disabled:bg-emerald-300"
                                                 >
-                                                    Aprobar
+                                                    {{ procesandoAprobacion && reservaParaAprobar?.id === reserva.id ? 'Procesando...' : 'Aprobar' }}
                                                 </button>
                                             </div>
                                         </div>
@@ -417,6 +481,19 @@ const calendarOptions = computed(() => ({
                 </article>
             </div>
         </section>
+
+        <ConfirmationModal
+            :show="Boolean(reservaParaAprobar)"
+            title="Aprobar reserva"
+            :message="`La solicitud de ${reservaParaAprobar?.usuario?.nombre || 'este usuario'} sera confirmada y el aula quedara reservada en el horario indicado.`"
+            confirm-text="Aprobar"
+            cancel-text="Volver"
+            variant="primary"
+            :processing="procesandoAprobacion"
+            @confirm="confirmarAprobacion"
+            @cancel="cerrarConfirmacionAprobacion"
+            @close="cerrarConfirmacionAprobacion"
+        />
     </AuthenticatedLayout>
 </template>
 

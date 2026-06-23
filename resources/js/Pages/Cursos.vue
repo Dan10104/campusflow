@@ -14,6 +14,7 @@ import {
     CpuChipIcon,
     CubeIcon,
     DevicePhoneMobileIcon,
+    ExclamationTriangleIcon,
     FingerPrintIcon,
     LockClosedIcon,
     MapPinIcon,
@@ -157,16 +158,35 @@ const contactForm = useForm({
     email: '',
     message: ''
 });
+const contactFeedback = ref(null);
 
 const submitContact = () => {
+    contactFeedback.value = null;
+
     contactForm.post(route('contact.send'), {
         preserveScroll: true,
-        onSuccess: () => {
-            alert('¡Gracias por su mensaje! Nos pondremos en contacto pronto.');
+        onSuccess: (page) => {
+            const flash = page.props?.flash || {};
+
+            if (flash.error) {
+                contactFeedback.value = {
+                    type: 'error',
+                    message: flash.error,
+                };
+                return;
+            }
+
+            contactFeedback.value = {
+                type: 'success',
+                message: flash.success || 'Mensaje enviado correctamente. El equipo revisara tu solicitud.',
+            };
             contactForm.reset();
         },
         onError: () => {
-            alert('Hubo un error al enviar el mensaje. Por favor revise los campos.');
+            contactFeedback.value = {
+                type: 'error',
+                message: 'Hubo un error al enviar el mensaje. Por favor revise los campos.',
+            };
         }
     });
 };
@@ -698,6 +718,28 @@ const closeMobileMenu = () => {
 
                     <form @submit.prevent="submitContact" class="rounded-[2rem] border border-[#E2E8F0] bg-[#F8FAFC] p-6 shadow-xl shadow-slate-900/5 sm:p-8" novalidate>
                         <div class="grid gap-6">
+                            <div
+                                v-if="contactFeedback"
+                                :class="[
+                                    'flex items-start gap-3 rounded-xl border px-4 py-3 text-sm font-semibold',
+                                    contactFeedback.type === 'success'
+                                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                        : 'border-amber-200 bg-amber-50 text-amber-700'
+                                ]"
+                            >
+                                <CheckCircleIcon
+                                    v-if="contactFeedback.type === 'success'"
+                                    class="mt-0.5 h-5 w-5 flex-none"
+                                    aria-hidden="true"
+                                />
+                                <ExclamationTriangleIcon
+                                    v-else
+                                    class="mt-0.5 h-5 w-5 flex-none"
+                                    aria-hidden="true"
+                                />
+                                <span>{{ contactFeedback.message }}</span>
+                            </div>
+
                             <div>
                                 <label for="name" class="block text-sm font-black text-[#0B1F3A]">Nombre</label>
                                 <input
